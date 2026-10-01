@@ -76,11 +76,20 @@ Or copy the `product-map` folder into your agent's skills directory (for example
 
 ## Use
 
-Then ask your agent, in its own words:
+Ask your agent in plain language; the skill triggers from its description:
 
 - "Map this product." or "Create a Product Map for this app." (Create)
 - "I changed how sharing works. Update the Product Map." (Update)
 - "Does `/product` still match the app?" (Review)
+
+In Claude Code you can also invoke it directly. Anything after the command is passed along, so `/product-map review` or `/product-map I made posts editable` picks the mode:
+
+| Installed via | Command |
+|---|---|
+| `npx skills add` or copied into `.claude/skills/` | `/product-map` |
+| Claude Code plugin | `/nuthinking-skills:product-map` |
+
+After the first run, the skill adds a short `## Product Map` section to the repo's `AGENTS.md` / `CLAUDE.md`, so later agents keep the map current even without the skill installed.
 
 The skill:
 
