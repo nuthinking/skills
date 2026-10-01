@@ -4,25 +4,26 @@ Agent skills by [nuthinking](https://github.com/nuthinking). They work with Clau
 
 ## Install
 
-Claude Code:
-
-```bash
-claude plugins install nuthinking-skills
-```
-
-Or from inside a session:
-
-```text
-/plugin install nuthinking-skills
-```
-
-Codex and other agents, or editable copies in your own repo:
+Any agent that reads `SKILL.md` (Claude Code, Codex, Cursor, and others). This symlinks the skills into your project, or into your user directory with `-g`:
 
 ```bash
 npx skills@latest add nuthinking/skills
 ```
 
 Update later with `npx skills update`.
+
+Claude Code, as a managed plugin that updates with `claude plugin update`. Inside a session:
+
+```text
+/plugin install nuthinking-skills --marketplace nuthinking/skills
+```
+
+Or from your shell, where the first command registers this repo as a plugin source and the second installs from it:
+
+```bash
+claude plugin marketplace add nuthinking/skills
+claude plugin install nuthinking-skills@nuthinking
+```
 
 ## Skills
 

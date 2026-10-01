@@ -34,6 +34,14 @@ MERMAID_RESERVED = {"end", "graph", "subgraph", "style", "class", "click", "defa
 UNCLEAR = "⚠️ Behavior unclear from the current implementation."
 DISAGREE = "⚠️ UI and code disagree:"
 LINK_RE = re.compile(r"(?<!!)\[([^\]]*)\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+# Mermaid node shapes: longer delimiters first so `([` is not read as `(`.
+# The asymmetric shape `A>text]` only counts when `>` directly follows an id, so `-->` is not an opener.
+SHAPE_OPEN = r"(?:\(\[|\[\(|\[/|\[\\|\[\[|\(\(|\{\{|\[|\(|\{|(?<=\w)>)"
+SHAPE_CLOSE = r"(?:\]\)|\)\]|/\]|\\\]|\]\]|\)\)|\}\}|\]|\)|\})"
+SHAPE_LABEL_RE = re.compile(SHAPE_OPEN + r"([^\]\)\}]*?)" + SHAPE_CLOSE)
+NODE_DEF_RE = re.compile(r"([A-Za-z_][\w-]*)\s*" + SHAPE_OPEN)
+MERMAID_KEYWORD_RE = re.compile(r"^(subgraph|end|style|classDef|class|linkStyle|click|direction)(?![\w-])")
+EDGE_RE = re.compile(r"(-->|---|-\.->|==>|-\.-|--|==|\.-)")
 
 
 class Report:
@@ -79,13 +87,7 @@ def slugify(heading: str) -> str:
 def heading_anchors(md: str) -> set[str]:
     anchors: set[str] = set()
     counts: Counter = Counter()
-    in_fence = False
-    for line in md.splitlines():
-        if line.startswith("```") or line.startswith("````"):
-            in_fence = not in_fence
-            continue
-        if in_fence:
-            continue
+    for line in strip_fences(md).splitlines():
         m = re.match(r"^(#{1,6})\s+(.*?)\s*#*\s*$", line)
         if m:
             base = slugify(m.group(2))
@@ -107,7 +109,7 @@ def parse_frontmatter(md: str):
             return data, i
         if not raw.strip() or raw.lstrip().startswith("#"):
             continue
-        m_item = re.match(r"^\s+-\s*(.*)$", raw)
+        m_item = re.match(r"^\s*-\s*(.*)$", raw)
         if m_item and key is not None and isinstance(data.get(key), list):
             data[key].append(_scalar(m_item.group(1)))
             continue
@@ -203,12 +205,11 @@ def check_mermaid(rep: Report, rel: str, start_line: int, code: str) -> None:
         return
     defined: set[str] = set()
     referenced: set[str] = set()
-    node_def_re = re.compile(r"([A-Za-z_][\w-]*)\s*(\(\[|\[\[|\[\(|\[/|\[\\|\(\(|\{\{|\[|\(|\{|>)")
     token_re = re.compile(r"(?<![\w\"'\[\]{}()|/\\>-])([A-Za-z_][\w-]*)(?![\w-])")
     for off, raw in enumerate(lines[1:], start=1):
         ln = start_line + off + 1
         s = raw.strip()
-        if re.match(r"^(subgraph|end\b|style|classDef|class |linkStyle|click|direction)", s):
+        if MERMAID_KEYWORD_RE.match(s):
             continue
         # Bracket balance (ignoring quoted text)
         unq = re.sub(r'"[^"]*"', '""', s)
@@ -216,20 +217,20 @@ def check_mermaid(rep: Report, rel: str, start_line: int, code: str) -> None:
             if unq.count(o) != unq.count(c):
                 rep.error(rel, f"mermaid: unbalanced '{o}{c}' in line: {s}", ln)
         # Unquoted special characters inside labels
-        for m in re.finditer(r"(\(\[|\[\(|\[/|\[\\|\[\[|\(\(|\{\{|\[|\(|\{)([^\]\)\}]*?)(\]\)|\)\]|/\]|\\\]|\]\]|\)\)|\}\}|\]|\)|\})", unq):
-            label = m.group(2)
+        for m in SHAPE_LABEL_RE.finditer(unq):
+            label = m.group(1)
             if '""' in label:
                 continue
             if re.search(r"[()\[\]{}|#;<>]", label):
                 rep.warn(rel, f"mermaid: a label in '{s}' contains ( ) [ ] {{ }} | # ; < or >; quote it, e.g. A[\"Export (PDF)\"]", ln)
                 break
         # Node ids
-        for m in node_def_re.finditer(unq):
+        for m in NODE_DEF_RE.finditer(unq):
             defined.add(m.group(1))
         # Strip labels and edge labels, then collect bare identifiers as references
         stripped = re.sub(r"\|[^|]*\|", "|", unq)
-        stripped = re.sub(r"(\(\[|\[\[|\[\(|\[/|\[\\|\(\(|\{\{|\[|\(|\{|>)[^\]\)\}]*?(\]\)|\]\]|\)\]|/\]|\\\]|\)\)|\}\}|\]|\)|\})", "", stripped)
-        stripped = re.sub(r"(-->|---|-\.->|==>|-.-|--|==|\.-)", " ", stripped)
+        stripped = SHAPE_LABEL_RE.sub("", stripped)
+        stripped = EDGE_RE.sub(" ", stripped)
         stripped = re.sub(r"&", " ", stripped)
         for m in token_re.finditer(stripped):
             tok = m.group(1)
@@ -291,7 +292,7 @@ def validate(product: str) -> Report:
                 feature_ids[fid] = n
             current_fid = fid
             continue
-        m = re.match(r"^\*\*Status:\*\*\s*(\S+)", line)
+        m = re.match(r"^\*\*Status:\*\*\s*`?([^`\s]+)`?", line)
         if m and current_feature and m.group(1) not in STATUS_VALUES:
             rep.error("features.md", f"feature status '{m.group(1)}' must be one of {sorted(STATUS_VALUES)}", n)
         m = re.match(r"^\*\*Flows:\*\*\s*(.*)$", line)
@@ -364,6 +365,8 @@ def validate(product: str) -> Report:
         blocks = mermaid_blocks(body)
         if not blocks:
             rep.error(rel, "no ```mermaid block found; the flowchart is the primary artifact")
+        elif flow_sec is not None and not mermaid_blocks(flow_sec):
+            rep.error(rel, "the mermaid diagram must be inside the '## Flow' section, not under another heading")
         else:
             if len(blocks) > 1:
                 rep.warn(rel, f"{len(blocks)} mermaid blocks; a flow should have one diagram (split into another flow if needed)")

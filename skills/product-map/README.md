@@ -53,16 +53,23 @@ Browse the Product Map locally
 
 ## Install
 
-Claude Code, as a plugin:
-
-```bash
-claude plugins install nuthinking-skills
-```
-
-Codex, Cursor, and other agents, or if you want editable copies in your project:
+Any agent that reads `SKILL.md`:
 
 ```bash
 npx skills@latest add nuthinking/skills
+```
+
+Claude Code, as a managed plugin, from inside a session:
+
+```text
+/plugin install nuthinking-skills --marketplace nuthinking/skills
+```
+
+Or from your shell:
+
+```bash
+claude plugin marketplace add nuthinking/skills
+claude plugin install nuthinking-skills@nuthinking
 ```
 
 Or copy the `product-map` folder into your agent's skills directory (for example `.claude/skills/product-map`).
@@ -108,4 +115,5 @@ product-map/
     pr-section.md                  The "Product behavior" section for PR descriptions
   scripts/
     validate.py                    Structural validator, Python 3, no dependencies
+    test_validate.py               Regression tests for the validator
 ```

@@ -11,7 +11,7 @@ Add this section to the PR description whenever the change touches `/product`. K
 - Posts can now be up to 280 characters (was 140).
 - Authors can no longer delete an article from the article page.
 
-Updated flows: [Share a post](../blob/<branch>/product/flows/share-post.md), [Edit your article](../blob/<branch>/product/flows/manage-article.md)
+Updated flows: [Share a post](https://github.com/<owner>/<repo>/blob/<branch>/product/flows/share-post.md), [Edit your article](https://github.com/<owner>/<repo>/blob/<branch>/product/flows/manage-article.md)
 
 <details>
 <summary>Share a post (updated)</summary>
