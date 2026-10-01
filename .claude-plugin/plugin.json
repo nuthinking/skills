@@ -1,0 +1,22 @@
+{
+  "name": "nuthinking-skills",
+  "version": "0.1.0",
+  "description": "nuthinking's agent skills. Starts with Product Map: a repo-native map of what your product does (features + flows) that humans and coding agents share.",
+  "author": {
+    "name": "nuthinking",
+    "url": "https://github.com/nuthinking"
+  },
+  "repository": "https://github.com/nuthinking/skills",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "product-map",
+    "product",
+    "documentation",
+    "flows",
+    "features"
+  ],
+  "skills": [
+    "./skills/product-map"
+  ]
+}

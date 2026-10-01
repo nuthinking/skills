@@ -1,0 +1,17 @@
+{
+  "name": "nuthinking",
+  "owner": {
+    "name": "nuthinking",
+    "url": "https://github.com/nuthinking"
+  },
+  "description": "nuthinking's agent skills, installable as a Claude Code plugin.",
+  "plugins": [
+    {
+      "name": "nuthinking-skills",
+      "source": "./",
+      "description": "Product Map and other skills for coding agents.",
+      "category": "productivity",
+      "keywords": ["skills", "product-map", "documentation", "flows"]
+    }
+  ]
+}
