@@ -127,7 +127,7 @@ Future agents must know the map exists, so `AGENTS.md` and/or `CLAUDE.md` point 
 
 ## Viewer setup
 
-Configure the viewer during initial creation when the repo already uses Node-compatible package management. First run a cheap availability check, `npm view @nuthinking/product-map version`; if it fails, skip the install and go straight to the fallback below. Otherwise detect the package manager from lockfiles and the `packageManager` field, and use that one only:
+Configure the viewer during initial creation when the repo already uses Node-compatible package management. Detect the package manager from lockfiles and the `packageManager` field, and use that one only:
 
 | Evidence | Install command |
 |---|---|
@@ -138,26 +138,32 @@ Configure the viewer during initial creation when the repo already uses Node-com
 
 Then add to `package.json` scripts: `"product-map": "product-map"`. If a script named `product-map` already exists, read it first and leave it alone if it does something else. In a monorepo, add the dependency and script to the root package.
 
-If the package is unavailable or the install fails (not published yet, registry unreachable, offline), do not retry and do not add the script. Leave `package.json` and the lockfile as they were and say plainly that the viewer could not be installed. The Product Map is complete without it: the Mermaid diagrams render on GitHub and in most Markdown previews (VS Code, GitLab, Obsidian), so tell the user to start at `product/README.md` and give `npx @nuthinking/product-map` as the command to use once the package is available.
+The CLI the package installs:
 
-Skip installation entirely when the repo is not a Node project. Do not add a `package.json` just for the viewer and do not introduce a second package manager. Mention `npx @nuthinking/product-map` as an option if the developer has Node.
+```text
+product-map [serve] [dir] [options]   Serve the viewer (default). Prints "Local <url>", port 4747 or next free.
+product-map validate [dir] [--json]   Validate; exit 1 on errors. Same checks as the bundled validate.py.
+  -p <port>  --no-open  --no-watch    Options for serve. The browser opens by default only from a terminal.
+```
 
-Before relying on any viewer subcommand (such as `validate`), inspect what the installed package actually provides: its README, `package.json` `bin`, or `--help` output. Do not assume commands exist.
+`dir` defaults to `./product`. Run `product-map --help` if the installed version behaves differently from this.
+
+If the install fails (registry unreachable, offline, policy), do not retry and do not add the script. Leave `package.json` and the lockfile as they were and say plainly that the viewer could not be installed. The Product Map is complete without it: the Mermaid diagrams render on GitHub and in most Markdown previews, so point the user at `product/README.md` and give `npx @nuthinking/product-map` to try later.
+
+Skip installation entirely when the repo is not a Node project. Do not add a `package.json` just for the viewer and do not introduce a second package manager. The developer can still run `npx @nuthinking/product-map` from the repo root if Node is available.
 
 ## Validation
 
-Run validation after every create or update, and during review.
+Run validation after every create or update, and during review. The viewer's `validate` and the bundled `scripts/validate.py` are the same checks, so run whichever the repo has; there is no need to run both.
 
-1. If `@nuthinking/product-map` is installed and provides a validate command (check first), run it through the package script, for example `npm run product-map -- validate`.
-2. Always also run the bundled structural validator; it has no dependencies beyond Python 3. Run it from the repo root, with this skill's own directory substituted for the placeholder:
+1. **Viewer configured:** run it through the package script, `npm run product-map -- validate` (or `pnpm product-map validate`, `bun run product-map validate`). This is also the command to put in the agent instructions.
+2. **No viewer in the repo:** run the bundled validator from the repo root, with this skill's own directory substituted for the placeholder, and copy it to `product/validate.py` so teammates and CI get a portable command, `python3 product/validate.py`, that does not depend on where the skill is installed. It needs only Python 3. Overwrite an older copy when you update the map; remove it once the viewer is configured. The viewer ignores non-Markdown files in `product/`.
 
 ```bash
 python3 <path-to-this-skill>/scripts/validate.py product
 ```
 
-Add `--json` for machine-readable output.
-
-3. When no viewer validate command works in the repo, copy `scripts/validate.py` from this skill to `product/validate.py` so teammates and CI get a portable command, `python3 product/validate.py`, that does not depend on where the skill is installed. Overwrite an older copy when you update the map. Remove the copy once the viewer's validate command is configured. Never write a machine-specific absolute path into shared files.
+Add `--json` to either command for machine-readable output. Never write a machine-specific absolute path into shared files.
 
 It checks that required files and frontmatter exist, IDs are unique and well-formed, every feature referenced by a flow exists, internal links and anchors resolve, each flow has a Mermaid flowchart with sane syntax, and flags likely duplicate flows. Fix all errors. Fix warnings unless they are deliberate; say so if you leave one. Info lines are for your awareness and need not be reported; marker counts there are occurrences, so one bug noted in both `features.md` and a flow counts twice.
 
@@ -167,8 +173,8 @@ If neither Python nor the package is available, check the same list by hand and 
 
 Getting the map in front of a human visually is part of the job, not an optional extra.
 
-- **You can run commands and open or expose localhost:** run the configured script (`npm run product-map` or the package-manager equivalent) in the background, read the URL it prints, open it or expose it, and tell the user the actual URL. Never invent a port or URL.
-- **You can run the process but not open a browser:** start it, report the URL the CLI printed, and ask the user to open it.
+- **You can run commands and open or expose localhost:** run the configured script (`npm run product-map` or the package-manager equivalent) in the background, read the `Local` URL it prints, open it or expose it, and tell the user the actual URL. Never invent a port or URL. Leave it running while you keep editing: the viewer reloads on every change under `product/`.
+- **You can run the process but not open a browser:** start it with `--no-open` so nothing pops up on a machine the user is not looking at, report the URL the CLI printed, and ask the user to open it.
 - **You cannot run or keep a local server:** finish and validate the map, then tell the user exactly what to run, using the repo's package manager, for example `pnpm product-map`. If the viewer was not installed, recommend `npx @nuthinking/product-map`.
 - **The viewer is not installed and cannot be:** say so once, point the user at `product/README.md` and Mermaid-capable previews, and give the `npx` command for later. Do not present a command you know will fail as if it works.
 
@@ -177,6 +183,10 @@ Launch after a create, and after an update that is substantial or changes a diag
 ## Pull requests
 
 Diffs of Mermaid source are unreadable, but GitHub and GitLab render ```mermaid blocks in PR descriptions. So whenever a change touches `/product` and you write or are asked to write the PR description, add a `## Product behavior` section: one to three "before → after" bullets in user terms, links to the affected flow files on the branch, and the updated diagram inline in a collapsed block (previous and updated when the structure changed). Template and rules: [references/pr-section.md](references/pr-section.md). This lets a reviewer check the behavior change at a glance before reading code. Do not open or edit a PR unless the user asked for one; if you are not writing the PR, hand the section to the user as text.
+
+## Prompts from the viewer
+
+The viewer's Review tab lists every validation problem and every `⚠️` marker, each with a "Copy fix prompt" button. Those prompts begin with "Using the product-map skill" and name a file, a line and a problem. Treat one as a narrow *Update*: do exactly what it asks for the item it names, do not rewrite healthy content around it, validate, and report what you resolved and what is still open. For a disagreement note, confirm both sides with evidence and ask before changing product behavior.
 
 ## When not to touch the Product Map
 

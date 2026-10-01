@@ -97,19 +97,22 @@ The skill:
 2. Writes `/product/README.md`, `/product/features.md` and one file per major flow (usually 5 to 15).
 3. Adds a short pointer section to `AGENTS.md` / `CLAUDE.md` so future agents read and maintain the map.
 4. In Node projects, installs `@nuthinking/product-map` as a dev dependency with your existing package manager and adds a `product-map` script.
-5. Validates the result with the viewer's validator when available, and always with the skill's own `scripts/validate.py` (Python 3, no dependencies). When the viewer is not set up, it copies that script to `product/validate.py` so teammates and CI can run `python3 product/validate.py`.
+5. Validates the result with `product-map validate` when the viewer is installed, otherwise with the skill's own `scripts/validate.py` (Python 3, no dependencies), which it copies to `product/validate.py` so teammates and CI can run it too. Both run the same checks.
 6. Launches the graphical viewer, or tells you the exact command to run.
 
 ## The viewer
 
-`@nuthinking/product-map` is a separate npm package that reads `/product`, validates its structure and serves a local graphical browser for features and flows.
+[`@nuthinking/product-map`](https://www.npmjs.com/package/@nuthinking/product-map) is a separate npm package that reads `/product`, validates its structure and serves a local browser for features and flows at `http://127.0.0.1:4747`, reloading as the files change.
 
 ```bash
-npm run product-map        # when configured by the skill
-npx @nuthinking/product-map  # one-off, any repo with Node available
+npm run product-map                 # when configured by the skill
+npm run product-map -- validate     # same checks as the skill's validator; exit 1 on errors, good for CI
+npx @nuthinking/product-map         # one-off, any repo with Node available
 ```
 
-The Markdown is always the source of truth. The viewer only renders it. Until the package is available, the Mermaid diagrams render on GitHub and in most Markdown previews, so `product/README.md` is a fine starting point on its own.
+Its Review tab lists validation problems and open `⚠️` markers, each with a "Copy fix prompt" button whose text an agent with this skill resolves as a focused update.
+
+The Markdown is always the source of truth. The viewer only renders it, and the diagrams render on GitHub and in most Markdown previews without it.
 
 ## What is in this folder
 
