@@ -110,6 +110,16 @@ npm run product-map -- validate     # same checks as the skill's validator; exit
 npx @nuthinking/product-map         # one-off, any repo with Node available
 ```
 
+![A flow page: the Mermaid diagram with pan and zoom, behavior details below](https://raw.githubusercontent.com/nuthinking/product-map-viewer/main/docs/screenshots/flow.png)
+
+| Feature Map | Relationship map |
+|---|---|
+| ![Feature cards grouped by area](https://raw.githubusercontent.com/nuthinking/product-map-viewer/main/docs/screenshots/feature-map.png) | ![Features and flows side by side with their connections](https://raw.githubusercontent.com/nuthinking/product-map-viewer/main/docs/screenshots/relationship-map.png) |
+
+| Overview | Review |
+|---|---|
+| ![The README with counts for features, flows and open questions](https://raw.githubusercontent.com/nuthinking/product-map-viewer/main/docs/screenshots/overview.png) | ![Open questions with copy-prompt buttons](https://raw.githubusercontent.com/nuthinking/product-map-viewer/main/docs/screenshots/review.png) |
+
 Its Review tab lists validation problems and open `⚠️` markers, each with a "Copy fix prompt" button whose text an agent with this skill resolves as a focused update.
 
 The Markdown is always the source of truth. The viewer only renders it, and the diagrams render on GitHub and in most Markdown previews without it.

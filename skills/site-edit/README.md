@@ -6,6 +6,20 @@ Editors sign in with GitHub, drop pins and notes on the live site or on a previe
 
 Nothing technical reaches the editors. The developer sets it up once, and this skill does the setup: it installs [`@nuthinking/site-edit`](https://www.npmjs.com/package/@nuthinking/site-edit), mounts the widget and the handlers, copies and adapts the workflows, writes the rules the agent follows, and hands over the checklist of settings only a human can make.
 
+## What it looks like
+
+![A note on the headline: the pin's box names the component and the element, quotes its text, and takes the note](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/note.png)
+
+| Notes across pages, in the tray | On a preview: the agent's replies, Ship and Discard |
+|---|---|
+| ![The tray lists the batch grouped by page, with Send](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/tray.png) | ![The review panel in the tray on a pull request's preview](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/review.png) |
+
+| On a phone: the note as a bottom sheet | The tray as a sheet | The approve page the email links to |
+|---|---|---|
+| ![The note box as a bottom sheet with the keyboard](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/phone-note.png) | ![The tray as a bottom sheet](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/phone-tray.png) | ![The approve page: title, replies, Ship](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/approve.png) |
+
+The pictures come from the package's Storybook, which wraps the widget in a fake site; on a real site the widget inherits the site's font and colours.
+
 ## What the skill does
 
 ```text
