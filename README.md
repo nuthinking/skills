@@ -1,5 +1,7 @@
 # nuthinking/skills
 
+[![skills.sh](https://skills.sh/b/nuthinking/skills)](https://skills.sh/nuthinking/skills)
+
 Agent skills by [nuthinking](https://github.com/nuthinking). They work with Claude Code, Codex, Cursor and any other agent that reads the `SKILL.md` convention.
 
 ## Install
@@ -30,6 +32,7 @@ claude plugin install nuthinking-skills@nuthinking
 | Skill | What it does |
 |---|---|
 | [`product-map`](skills/product-map) | Creates and maintains a Product Map in `/product`: a sitemap for what your software does. A Feature Map (what capabilities exist) plus Mermaid Product Flows (how the product behaves), kept in the repo so humans and agents share one model. Pairs with the `@nuthinking/product-map` viewer. |
+| [`site-edit`](skills/site-edit) | Sets up editing a website from the website: editors sign in with GitHub, drop pins and notes on the live site or a preview, and an AI agent (Claude Code on GitHub Actions) makes the change and opens a PR; an email with screenshots and a Ship link merges it. Installs and configures the `@nuthinking/site-edit` package, workflows and agent rules. |
 
 ## Layout
 

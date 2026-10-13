@@ -1,7 +1,7 @@
 {
   "name": "nuthinking-skills",
-  "version": "0.1.0",
-  "description": "nuthinking's agent skills. Starts with Product Map: a repo-native map of what your product does (features + flows) that humans and coding agents share.",
+  "version": "0.2.0",
+  "description": "nuthinking's agent skills: Product Map (a repo-native map of what your product does) and Site Edit (edit a website from the website, with an AI agent making the change).",
   "author": {
     "name": "nuthinking",
     "url": "https://github.com/nuthinking"
@@ -14,9 +14,15 @@
     "product",
     "documentation",
     "flows",
-    "features"
+    "features",
+    "site-edit",
+    "website",
+    "editing",
+    "claude-code",
+    "github-actions"
   ],
   "skills": [
-    "./skills/product-map"
+    "./skills/product-map",
+    "./skills/site-edit"
   ]
 }
