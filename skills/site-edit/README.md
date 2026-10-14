@@ -14,9 +14,9 @@ Nothing technical reaches the editors. The developer sets it up once, and this s
 |---|---|
 | ![The tray lists the batch grouped by page, with Send](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/tray.png) | ![The review panel in the tray on a pull request's preview](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/review.png) |
 
-| On a phone: the note as a bottom sheet | The tray as a sheet | The approve page the email links to |
+| On a phone: the note form, full screen | The tray as a bottom panel | The approve page the email links to |
 |---|---|---|
-| ![The note box as a bottom sheet with the keyboard](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/phone-note.png) | ![The tray as a bottom sheet](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/phone-tray.png) | ![The approve page: title, replies, Ship](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/approve.png) |
+| ![The note form taking the phone's screen](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/phone-note.png) | ![The tray as a bottom panel](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/phone-tray.png) | ![The approve page: title, replies, Ship](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/approve.png) |
 
 The pictures come from the package's Storybook, which wraps the widget in a fake site; on a real site the widget inherits the site's font and colours.
 
