@@ -72,6 +72,6 @@ Protect the default branch so changes land only through pull requests. Branch pr
 ## First run
 
 1. On the live site, Alt+right-click on any text (desktop) or hold with two fingers (phone). Sign in with GitHub.
-2. Drop one note, Send. The tray links to the issue.
+2. Drop one note, Request change. The tray links to the issue.
 3. Watch the Claude workflow run (GitHub → Actions). A pull request appears, then a preview, then the email.
 4. Open the preview from the email, look, then **Ship it**. The live site updates in a couple of minutes.

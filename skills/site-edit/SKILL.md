@@ -76,6 +76,7 @@ Reproduce from the evidence first: the workflow run's log (`gh run view <id> --l
 | The agent pushed a branch but no PR appeared; log says "GitHub Actions is not permitted to create or approve pull requests" | Repository (and organisation) setting: Actions → General → Workflow permissions → "Allow GitHub Actions to create and approve pull requests". The user flips it; see setup.md. |
 | PR step fails with "Invalid username or token" on `git` | The action replaces git credentials. The template uses the API (`gh api`, `gh pr create`), never git; restore that. |
 | Two emails for one commit | Both triggers fired within seconds. The template's `concurrency` block serialises runs; make sure it is there. |
+| The agent pushed a branch, the run failed at the PR step with "unexpected end of JSON input" or another `gh` error, no PR | A transient GitHub API failure. The template's PR step retries each call three times; make sure the `try` wrapper is there. If a run still fails, recover by hand: open the PR from the pushed branch with the report from the log as the description (`gh pr create --base <default> --head claude/<branch> --title ... --body-file ...`, plus `Closes #<issue>`), then start the email with `gh workflow run preview-email.yml -f pr=<number>`. Re-running the job would run the agent again. |
 | Email workflow 403 listing deployments | `permissions: deployments: read` missing. |
 | Resend 422 "domain is invalid" | `EDIT_FROM_EMAIL` not on a domain verified in Resend, or the secret arrives empty. |
 | No email at all, log says no address | The batch had no notify marker (issue written by hand on GitHub) and `EDIT_NOTIFY_EMAILS` is unset; or `SITE_EDIT_SECRET` differs between Vercel and the repository secrets. |
@@ -103,4 +104,4 @@ End an install with a short report that covers:
 - Whether `AGENTS.md` / `CLAUDE.md` gained the rules section, and which lines were filled from the project
 - The check command's result, and what was verified locally
 - The settings checklist for the user, with this project's values, and what cannot be tested until they are done
-- What to try first once set up: sign in on the live site with Alt+right-click, drop one note, Send, watch the issue, the PR, the email, then Ship
+- What to try first once set up: sign in on the live site with Alt+right-click, drop one note, Request change, watch the issue, the PR, the email, then Ship

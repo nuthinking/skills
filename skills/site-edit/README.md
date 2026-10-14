@@ -12,7 +12,7 @@ Nothing technical reaches the editors. The developer sets it up once, and this s
 
 | Notes across pages, in the tray | On a preview: the agent's replies, Ship and Discard |
 |---|---|
-| ![The tray lists the batch grouped by page, with Send](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/tray.png) | ![The review panel in the tray on a pull request's preview](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/review.png) |
+| ![The tray lists the batch grouped by page, with Request change](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/tray.png) | ![The review panel in the tray on a pull request's preview](https://raw.githubusercontent.com/nuthinking/site-edit/main/docs/screenshots/review.png) |
 
 | On a phone: the note form, full screen | The tray as a bottom panel | The approve page the email links to |
 |---|---|---|
@@ -32,7 +32,7 @@ marks components, copies the workflows, writes the agent rules
       ↓
 You create the GitHub App, set the secrets, flip the Actions switch
       ↓
-Sign in on the site, drop a note, Send, ship from the email
+Sign in on the site, drop a note, Request change, ship from the email
 ```
 
 It also diagnoses the loop when a step fails (the table in `SKILL.md` lists the failures met in practice and their fixes) and updates the setup when the site changes.
