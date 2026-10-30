@@ -33,6 +33,7 @@ claude plugin install nuthinking-skills@nuthinking
 |---|---|
 | [`product-map`](skills/product-map) | Creates and maintains a Product Map in `/product`: a sitemap for what your software does. A Feature Map (what capabilities exist) plus Mermaid Product Flows (how the product behaves), kept in the repo so humans and agents share one model. Pairs with the `@nuthinking/product-map` viewer. |
 | [`site-edit`](skills/site-edit) | Sets up editing a website from the website: editors sign in with GitHub, drop pins and notes on the live site or a preview, and an AI agent (Claude Code on GitHub Actions) makes the change and opens a PR; an email with screenshots and a Ship link merges it. Installs and configures the `@nuthinking/site-edit` package, workflows and agent rules. |
+| [`design-catalog`](skills/design-catalog) | Extracts the design language a vibe-coded app already has and turns it into a design catalog: measures every screen of the running app, consolidates the drifted colours, type, spacing, radii and component shapes with you (about ten plain-language decisions), writes the tokens into the app's own styling system, migrates screens in verified steps, and leaves a `/design-catalog` page plus `DESIGN.md` so people and agents keep it consistent. |
 
 ## Layout
 
