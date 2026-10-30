@@ -6,6 +6,8 @@ Apps built by prompting drift. Each screen was generated on its own, so the "sam
 
 The design-catalog skill finds it and writes it down in the only places that count: the app's own tokens, the app's own components, a page in the app that renders them, and a short `DESIGN.md` that people and coding agents read before touching UI.
 
+![The /design-catalog page of a task manager: colour tokens with their roles, the type scale, then every shared component](https://raw.githubusercontent.com/nuthinking/skills/main/docs/screenshots/design-catalog/catalog.png)
+
 ## What it does
 
 1. **Measures the running app.** Every screen, every element, computed styles: the colour that is actually painted, not the class name. Plus a source scan that says where each value is written, which components exist and how often they are used.
@@ -13,6 +15,8 @@ The design-catalog skill finds it and writes it down in the only places that cou
 3. **Writes the tokens where the app keeps its theme.** Tailwind v4 `@theme`, Tailwind v3 config, shadcn's existing tokens, CSS variables, a styled-components theme: whichever the app already uses. No parallel system.
 4. **Makes the screens follow, in small verified steps.** Retired values become token classes; duplicate components merge into the shared one; after every step the screens are re-measured and compared against the "before" so that only the approved changes happened and nothing moved. All at once or batch by batch, the owner's choice.
 5. **Leaves a catalog.** `/design-catalog` in the app renders every token and component from the real code (no Storybook). `DESIGN.md` names them and states the rules. An `AGENTS.md` section makes sure the next agent reads both.
+
+![The optional one-page visual: one card per decision, the values it merges as swatches, with usage counts](https://raw.githubusercontent.com/nuthinking/skills/main/docs/screenshots/design-catalog/decisions.png)
 
 Later, **Review** mode measures again and lists everything on screen that matches no token, so drift is caught instead of accumulated.
 
