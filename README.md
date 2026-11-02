@@ -32,6 +32,7 @@ claude plugin install nuthinking-skills@nuthinking
 | Skill | What it does |
 |---|---|
 | [`product-map`](skills/product-map) | Creates and maintains a Product Map in `/product`: a sitemap for what your software does. A Feature Map (what capabilities exist) plus Mermaid Product Flows (how the product behaves), kept in the repo so humans and agents share one model. Pairs with the `@nuthinking/product-map` viewer. |
+| [`product-demo`](skills/product-demo) | Demo videos of product flows that regenerate when the product changes. Each demo is a YAML script in `/product/demos`; `@nuthinking/product-demo` replays it against the app in a seeded demo mode, keeps keyframes and an event log as the deterministic source, and renders videos in presets from sober documentation clips to marketing clips with device frames, parallax and voice-over. CI re-records only the demos a change can affect. |
 | [`site-edit`](skills/site-edit) | Sets up editing a website from the website: editors sign in with GitHub, drop pins and notes on the live site or a preview, and an AI agent (Claude Code on GitHub Actions) makes the change and opens a PR; an email with screenshots and a Ship link merges it. Installs and configures the `@nuthinking/site-edit` package, workflows and agent rules. |
 
 ## Layout

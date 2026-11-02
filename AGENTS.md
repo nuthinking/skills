@@ -10,3 +10,4 @@ When adding or changing a skill:
 - Scripts must be dependency-free where possible (Python 3 standard library) and runnable from any working directory.
 - Test a skill against a realistic repo before changing its instructions substantially.
 - After changing `skills/product-map/scripts/validate.py`, run `python3 skills/product-map/scripts/test_validate.py`.
+- After changing `skills/product-demo/scripts/validate.py`, run `python3 skills/product-demo/scripts/test_validate.py`.
