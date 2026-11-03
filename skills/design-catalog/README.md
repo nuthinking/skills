@@ -26,13 +26,13 @@ Storybook is a second build most prompted apps never had and would not maintain;
 
 ## Install
 
-Any agent that reads `SKILL.md`:
+Any agent that reads `SKILL.md` (Claude Code, Codex, Cursor, and others). This installs only this skill; add `-g` to install it in your user directory instead of the project:
 
 ```bash
-npx skills@latest add nuthinking/skills
+npx skills@latest add nuthinking/skills --skill design-catalog
 ```
 
-Claude Code as a plugin: `/plugin install nuthinking-skills --marketplace nuthinking/skills`.
+Claude Code as a plugin (this installs all the skills in this repo): `/plugin install nuthinking-skills --marketplace nuthinking/skills`.
 
 Then, in the app's repo, ask the agent to "extract the design system" or "clean up the design drift". It needs the dev server running (it will start it) and a browser tool to measure with; without one it works from the source alone and says so.
 

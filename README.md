@@ -12,6 +12,12 @@ Any agent that reads `SKILL.md` (Claude Code, Codex, Cursor, and others). This s
 npx skills@latest add nuthinking/skills
 ```
 
+To install a single skill, name it with `--skill` (each skill's README has its own command):
+
+```bash
+npx skills@latest add nuthinking/skills --skill product-map
+```
+
 Update later with `npx skills update`.
 
 Claude Code, as a managed plugin that updates with `claude plugin update`. Inside a session:
