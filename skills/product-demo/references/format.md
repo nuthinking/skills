@@ -61,11 +61,12 @@ Demo IDs are kebab-case and equal the file name without `.yaml`. A demo of a flo
 | `serve` | Command that builds and starts the app for recording, a production build with demo mode on. The skill adds a `demo` script to the repo for this. Started once per `record` run with `env` applied, stopped at the end. Omit when `url` is already up. |
 | `url` | Base URL the app answers on. Demo `start` paths are joined to it. |
 | `ready` | Selector (or `networkidle`) the recorder waits for after every navigation before acting. Pick something that appears only after hydration. |
-| `setup` | Command that puts the app in its seeded state. Runs before every demo unless the demo overrides it. Must be idempotent. |
+| `setup` | Command that puts the app in its seeded state. Runs once before signing in, then before every demo (and every repeat) unless the demo overrides it. Must be idempotent. |
+| `now` | The instant the browser clock is frozen at while recording, ISO 8601. Default `2026-01-15T10:00:00Z`. Set it a few days after the seed's timestamps so relative times ("edited 2 days ago") read well. |
 | `env` | Environment for `serve` and `setup`. This is where demo mode is switched on. |
 | `auth` | How the recorder signs in before a demo, when the app needs it. See below. Omit for apps without login. |
 | `viewport`, `deviceScaleFactor` | Defaults for all demos. Scale factor 2 keeps text crisp when the camera zooms. |
-| `defaults` | Default look for every demo: `style`, `device`, `theme`, `background`, `intro`, `outro`, `captions`, `cursor`, `highlight`, `output`. See styles.md. A demo file overrides any of them. |
+| `defaults` | Default look for every demo: `style`, `device`, `theme`, `background`, `intro`, `outro`, `captions`, `cursor`, `highlight`, `address`, `output`. See styles.md. A demo file overrides any of them. |
 | `narration` | Provider: `local` (bundled model, no key, default), `openai`, `elevenlabs`. `voice` and `language` are provider-specific. `false` turns narration off everywhere. |
 | `deps` | `ignore`: globs dropped from the discovered dependency set. `root`: the folder the app is served from, relative to the repo root, for bundlers whose source maps give sources relative to the map file (Vite, plain bundles); empty when that is the repo root. |
 | `store` | Where recordings and videos go (section 8). `target`: `s3` for any S3-compatible store (AWS S3, Cloudflare R2, Backblaze, MinIO), or `none` to keep everything in `.cache/`. `endpoint` is omitted for AWS. `baseUrl` is the public prefix written into the index. Credentials come from the environment, never from this file. |
@@ -74,7 +75,7 @@ Demo IDs are kebab-case and equal the file name without `.yaml`. A demo of a flo
 
 | Strategy | Meaning |
 |---|---|
-| `form` | The recorder opens `path` and performs `steps`, the same step format as a demo. `$NAME` in a `text` value is replaced by that environment variable, so credentials stay out of the file. Default names: `PRODUCT_DEMO_USER`, `PRODUCT_DEMO_PASSWORD`. |
+| `form` | The recorder opens `path` and performs `steps`, the same step format as a demo. `$NAME` in a `text` value is replaced by that environment variable, so credentials stay out of the file. Default names: `PRODUCT_DEMO_USER`, `PRODUCT_DEMO_PASSWORD`. `steps` may be left out when opening `path` alone signs in, for example a demo-mode route in the app that signs the test account in and redirects. |
 | `script` | `command` runs with `url` and a path in `PRODUCT_DEMO_STATE`, and must write a Playwright storage state file there. For apps without a password form, for example one that mints a magic link through an admin API and opens it. |
 | `state` | `path` to a committed-nowhere storage state file. Local use only; CI fails with a clear message. |
 
@@ -131,7 +132,7 @@ steps:
 | `title` | yes | Shown in the index and on the intro card. |
 | `flow` | no | A flow ID from `/product/flows`. Must exist when `/product/flows` exists. |
 | `description` | no | One line for the index. |
-| `style`, `device`, `background`, `intro`, `outro`, `captions`, `cursor`, `highlight` | no | The look, overriding `config.defaults`. Changing any of them re-renders. See styles.md. On a step, `label`, `say` and a scale `zoom` also only re-render; everything else in a step re-records. |
+| `style`, `device`, `background`, `intro`, `outro`, `captions`, `cursor`, `highlight`, `address` | no | The look, overriding `config.defaults`. Changing any of them re-renders. See styles.md. On a step, `label`, `say` and a scale `zoom` also only re-render; everything else in a step re-records. |
 | `theme` | no | `light` (default) or `dark`: the colour scheme the app is recorded in. Changing it re-records. |
 | `viewport` | no | `WxH` the app is recorded at. Overrides the config default. Use a phone size with `device: phone`. |
 | `output` | no | Render settings, overriding `config.defaults.output`: `width`, `height`, `scale`, `fps`, `quality` (`draft`, `good`, `high`), `format` (`mp4`, `webm`, `gif`), `loop`. |

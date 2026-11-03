@@ -36,7 +36,7 @@ THEMES = {"light", "dark"}
 # Keep in step with WALLPAPERS in the package (src/render/look.ts and src/validate.ts).
 WALLPAPERS = ["clay", "dusk", "dusk-2", "ember", "harbour", "heather", "lagoon", "mesh", "mist", "moss", "plum", "sage", "sand", "steel", "tide"]
 COLOR_RE = re.compile(r"^(#[0-9a-fA-F]{3,8}|(rgb|hsl)a?\(.*\))$")
-LOOK_KEYS = ["style", "device", "theme", "background", "intro", "outro", "output", "captions", "cursor", "highlight"]
+LOOK_KEYS = ["style", "device", "theme", "background", "intro", "outro", "output", "captions", "cursor", "highlight", "address"]
 TOP_KEYS = {"id", "title", "flow", "description", "viewport", "setup", "start", "watch", "narration", "steps", *LOOK_KEYS}
 OUTPUT_KEYS = {"width": int, "height": int, "scale": int, "fps": int, "quality": ("draft", "good", "high"), "format": ("mp4", "webm", "gif"), "loop": bool}
 AUTH_STRATEGIES = {"form", "script", "state"}
@@ -392,6 +392,8 @@ def check_look(rep: Report, rel: str, data: dict, demos: str, line) -> None:
         rep.error(rel, "cursor must be true, false, or { style: arrow | dot, size }", line("cursor"))
     if "highlight" in data and data["highlight"] is not None and not isinstance(data["highlight"], bool):
         rep.error(rel, "highlight must be true or false", line("highlight"))
+    if "address" in data and data["address"] is not None and not isinstance(data["address"], (bool, str)):
+        rep.error(rel, "address must be text, true or false", line("address"))
 
 
 def check_demo(rep: Report, demos: str, fname: str, flows_dir: str | None, ids: dict) -> None:
@@ -533,9 +535,9 @@ def check_config(rep: Report, demos: str) -> None:
         else:
             st = auth["strategy"]
             if st == "form":
-                steps = auth.get("steps")
-                if not isinstance(steps, list) or not steps:
-                    rep.error("config.json", "auth.steps is required with the form strategy")
+                steps = auth.get("steps", [])
+                if not isinstance(steps, list):
+                    rep.error("config.json", "auth.steps must be a list of steps (empty when opening auth.path alone signs in)")
                 else:
                     for i, step in enumerate(steps, start=1):
                         if not isinstance(step, dict) or step.get("do") not in ACTIONS:
