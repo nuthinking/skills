@@ -25,6 +25,10 @@ Three styles: `neutral` (the page itself), `device` (inside a browser, laptop or
 
 A local studio (`product-demo studio`) is the editor: it lists the demos with their status, previews any look from a recording without rendering, edits each step's label, narration and zoom, saves into the demo file, and records and renders from the page. Writing new demos stays with the coding agent and this skill; the studio has no model in it.
 
+![The studio's home page: every demo with its poster, its status, what changed since the last recording or render, and Edit, Record, Render and View](https://raw.githubusercontent.com/nuthinking/skills/main/docs/screenshots/product-demo/studio.jpg)
+
+![A demo open in the studio: the preview built from the recording with a scrubber, and the look controls beside it: style, device, address bar, wallpapers, cards](https://raw.githubusercontent.com/nuthinking/skills/main/docs/screenshots/product-demo/editor.jpg)
+
 Voice-over comes from a `say` line per step, generated with a local model by default (no key) or a cloud voice, cached per sentence so only changed lines regenerate. The same lines are the captions.
 
 ## Staying current
@@ -33,19 +37,26 @@ Every recording collects browser coverage and maps it back to repository files, 
 
 ## Install
 
-Any agent that reads `SKILL.md`:
+Any agent that reads `SKILL.md` (Claude Code, Codex, Cursor, and others). This installs only this skill; add `-g` to install it in your user directory instead of the project:
 
 ```bash
-npx skills@latest add nuthinking/skills
+npx skills@latest add nuthinking/skills --skill product-demo
 ```
 
-Claude Code, as a managed plugin, from inside a session:
+Claude Code, as a managed plugin (this installs all the skills in this repo), from inside a session:
 
 ```text
 /plugin install nuthinking-skills --marketplace nuthinking/skills
 ```
 
-Or copy the `product-demo` folder into your agent's skills directory.
+Or from your shell:
+
+```bash
+claude plugin marketplace add nuthinking/skills
+claude plugin install nuthinking-skills@nuthinking
+```
+
+Or copy the `product-demo` folder into your agent's skills directory (for example `.claude/skills/product-demo`).
 
 ## Use
 
