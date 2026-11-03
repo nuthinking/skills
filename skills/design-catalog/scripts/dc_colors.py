@@ -348,6 +348,71 @@ def describe(c: Color) -> str:
     return f"{tone}{sat}{name}".strip()
 
 
+# ------------------------------------------------------------------ contrast (WCAG 2.x)
+
+def over(top: Color, bottom: Color) -> Color:
+    """Composite top over bottom the way browsers paint backgrounds (in sRGB, source-over)."""
+    a = top[3] + bottom[3] * (1 - top[3])
+    if a <= 0:
+        return (0.0, 0.0, 0.0, 0.0)
+    rgb = tuple((top[i] * top[3] + bottom[i] * bottom[3] * (1 - top[3])) / a for i in range(3))
+    return (rgb[0], rgb[1], rgb[2], a)
+
+
+def luminance(c: Color) -> float:
+    """WCAG relative luminance of an opaque colour."""
+    r, g, b = (srgb_to_linear(clamp01(x)) for x in c[:3])
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def contrast(fg: Color, bg: Color) -> float:
+    """WCAG contrast ratio of text fg on an opaque background bg (fg alpha is composited first)."""
+    if fg[3] < 0.999:
+        fg = over(fg, bg)
+    a, b = luminance(fg), luminance(bg)
+    hi, lo = max(a, b), min(a, b)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def from_oklch(L: float, C: float, h: float, alpha: float = 1.0) -> Color | None:
+    """sRGB colour for an OKLCH value, or None when it is outside the sRGB gamut."""
+    r, g, b = (linear_to_srgb(x) for x in oklab_to_linear_srgb(L, C * math.cos(math.radians(h)), C * math.sin(math.radians(h))))
+    if min(r, g, b) < -0.001 or max(r, g, b) > 1.001:
+        return None
+    return (clamp01(r), clamp01(g), clamp01(b), alpha)
+
+
+def nudge_to_contrast(fg: Color, backgrounds: list[tuple[Color, float]]) -> Color | None:
+    """The smallest change in OKLCH lightness (hue and chroma kept, chroma reduced only to stay in gamut)
+    that makes fg reach every (background, required ratio). None when the backgrounds pull in opposite
+    directions or the target is out of reach (white text on a pale button cannot get lighter)."""
+    lf = luminance(fg if fg[3] >= 0.999 else over(fg, backgrounds[0][0]))
+    darker = [luminance(bg) > lf for bg, _ in backgrounds]
+    if any(darker) and not all(darker):
+        return None
+    step = -0.005 if darker[0] else 0.005
+    L, Ch, h = to_oklch(fg)
+    while 0 <= L <= 1:
+        L += step
+        cand = None
+        ch = Ch
+        while cand is None and ch >= 0:
+            cand = from_oklch(min(max(L, 0), 1), ch, h, fg[3])
+            ch -= 0.005
+        if cand and all(contrast(cand, bg) >= req for bg, req in backgrounds):
+            return cand
+    return None
+
+
+def palette_family(c: Color, max_delta: float = 0.03) -> list[tuple[str, Color]]:
+    """The shades of the Tailwind family nearest to c (v4 values), as (name, colour), or [] when none is close."""
+    hit = nearest_tailwind(c, max_delta)
+    if not hit or "-" not in hit[0]["name"]:
+        return []
+    family = hit[0]["name"].rsplit("-", 1)[0]
+    return [(f"{fam}-{shade}", pc) for version, fam, shade, pc in _palette() if version == "v4" and fam == family]
+
+
 _PALETTE_CACHE: list[tuple[str, str, str, Color]] | None = None
 
 
