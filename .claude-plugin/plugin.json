@@ -1,7 +1,7 @@
 {
   "name": "nuthinking-skills",
-  "version": "0.4.0",
-  "description": "nuthinking's agent skills: Product Map (a repo-native map of what your product does), Product Demo (demo videos of product flows that regenerate when the product changes), Site Edit (edit a website from the website, with an AI agent making the change) and Design Catalog (extract the design system a vibe-coded app already has and make every screen follow it).",
+  "version": "0.5.0",
+  "description": "nuthinking's agent skills: Product Map (a repo-native map of what your product does), Product Demo (demo videos of product flows that regenerate when the product changes), Site Edit (edit a website from the website, with an AI agent making the change), Design Catalog (extract the design system a vibe-coded app already has and make every screen follow it), and UI Tweaks (a polished Tweaks panel on top of your running app to fine-tune its craft details live, then hand the changes back to the agent).",
   "author": {
     "name": "nuthinking",
     "url": "https://github.com/nuthinking"
@@ -28,12 +28,17 @@
     "design-system",
     "design-tokens",
     "tailwind",
-    "vibe-coding"
+    "vibe-coding",
+    "ui-tweaks",
+    "tweaks",
+    "tuning-panel",
+    "live-controls"
   ],
   "skills": [
     "./skills/product-map",
     "./skills/product-demo",
     "./skills/site-edit",
-    "./skills/design-catalog"
+    "./skills/design-catalog",
+    "./skills/ui-tweaks"
   ]
 }
