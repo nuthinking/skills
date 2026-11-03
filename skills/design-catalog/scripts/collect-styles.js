@@ -12,7 +12,7 @@
 //   endpoint receiver base URL (default http://127.0.0.1:4848). Set to null to always return JSON.
 //
 // Snapshot schema (version 1):
-// { version, url, path, title, viewport:{width,height}, dpr, colorScheme, label, collectedAt,
+// { version, url, path, title, viewport:{width,height}, dpr, colorScheme, backdrop (background behind the collected root), label, collectedAt,
 //   rootVars:{ "--name": "value" }, fonts:[family...], styles:[{prop:value...}], elements:[{...}] }
 // element: { i, p (parent index or -1), t (tag), sel (selector path), r:[x,y,w,h], txt (own text, trimmed, max 60),
 //            role, dc (data-component), rc:[react component chain, nearest first], cls (class attribute, max 300), s (index into styles) }
@@ -197,6 +197,16 @@
       return document.documentElement.classList.contains("dark") || document.documentElement.dataset.theme === "dark" ? "dark" : "light";
     })(),
     prefersDark: matchMedia("(prefers-color-scheme: dark)").matches,
+    // the nearest painted background above the collected root (html for a full page), so text contrast
+    // can be judged; null when an image or gradient is in the way or nothing is painted (white canvas)
+    backdrop: (() => {
+      for (let n = root.parentElement; n; n = n.parentElement) {
+        const cs = getComputedStyle(n);
+        if (cs.backgroundImage && cs.backgroundImage !== "none") return null;
+        if (cs.backgroundColor && cs.backgroundColor !== "rgba(0, 0, 0, 0)" && cs.backgroundColor !== "transparent") return cs.backgroundColor;
+      }
+      return null;
+    })(),
     label: opts.label || null,
     filter: opts.filter || null,
     collectedAt: new Date().toISOString(),
