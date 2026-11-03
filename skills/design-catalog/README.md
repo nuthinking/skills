@@ -11,7 +11,7 @@ The design-catalog skill finds it and writes it down in the only places that cou
 ## What it does
 
 1. **Measures the running app.** Every screen, every element, computed styles: the colour that is actually painted, not the class name. Plus a source scan that says where each value is written, which components exist and how often they are used.
-2. **Finds the drift and groups it into about ten decisions.** "Four greys do the job of one; use this one." "Buttons come in three shapes; this is the most used." "Four type sizes are off the scale." Each decision is one line in plain words, answered in the conversation. A one-page visual with swatches and the rendered variants is there when words are not enough.
+2. **Finds the drift and groups it into about ten decisions.** "Four greys do the job of one; use this one." "Buttons come in three shapes; this is the most used." "Four type sizes are off the scale." It also checks that text is readable: every text element's contrast against what is actually painted behind it, after the merges, so "the one you meant" is not a grey that fails WCAG AA. Each decision is one line in plain words, answered in the conversation. A one-page visual with swatches and the rendered variants is there when words are not enough.
 3. **Writes the tokens where the app keeps its theme.** Tailwind v4 `@theme`, Tailwind v3 config, shadcn's existing tokens, CSS variables, a styled-components theme: whichever the app already uses. No parallel system.
 4. **Makes the screens follow, in small verified steps.** Retired values become token classes; duplicate components merge into the shared one; after every step the screens are re-measured and compared against the "before" so that only the approved changes happened and nothing moved. All at once or batch by batch, the owner's choice.
 5. **Leaves a catalog.** `/design-catalog` in the app renders every token and component from the real code (no Storybook). `DESIGN.md` names them and states the rules. An `AGENTS.md` section makes sure the next agent reads both.
@@ -26,13 +26,13 @@ Storybook is a second build most prompted apps never had and would not maintain;
 
 ## Install
 
-Any agent that reads `SKILL.md`:
+Any agent that reads `SKILL.md` (Claude Code, Codex, Cursor, and others). This installs only this skill; add `-g` to install it in your user directory instead of the project:
 
 ```bash
-npx skills@latest add nuthinking/skills
+npx skills@latest add nuthinking/skills --skill design-catalog
 ```
 
-Claude Code as a plugin: `/plugin install nuthinking-skills --marketplace nuthinking/skills`.
+Claude Code as a plugin (this installs all the skills in this repo): `/plugin install nuthinking-skills --marketplace nuthinking/skills`.
 
 Then, in the app's repo, ask the agent to "extract the design system" or "clean up the design drift". It needs the dev server running (it will start it) and a browser tool to measure with; without one it works from the source alone and says so.
 
@@ -70,5 +70,6 @@ All dependency-free (Python 3 standard library, Node built-ins) and runnable fro
 - Snapshots capture the resting state; hover, focus and open overlays are captured only when triggered with a filter, or checked by eye.
 - Component names in snapshots come from React dev builds; production builds and server components give fewer names, and the class strings are used instead.
 - Pseudo-elements and `::placeholder` styling are not measured.
+- Contrast is checked against an element's own and its ancestors' backgrounds. Text over images or gradients, or positioned over a sibling, is counted as not checked; the check covers WCAG AA for the resting state, not a full accessibility audit.
 - Icons, illustrations, motion and copy are noted but not consolidated.
 - A very fine grey scale can be over-merged at the default threshold; `analyze.py --threshold 0.02` tightens it.

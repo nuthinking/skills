@@ -53,13 +53,13 @@ Browse the Product Map locally
 
 ## Install
 
-Any agent that reads `SKILL.md`:
+Any agent that reads `SKILL.md` (Claude Code, Codex, Cursor, and others). This installs only this skill; add `-g` to install it in your user directory instead of the project:
 
 ```bash
-npx skills@latest add nuthinking/skills
+npx skills@latest add nuthinking/skills --skill product-map
 ```
 
-Claude Code, as a managed plugin, from inside a session:
+Claude Code, as a managed plugin (this installs all the skills in this repo), from inside a session:
 
 ```text
 /plugin install nuthinking-skills --marketplace nuthinking/skills

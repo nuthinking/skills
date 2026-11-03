@@ -13,7 +13,7 @@ source ──scan──▶ where each value lives                               
                                                                                     ▶ /design-catalog page + DESIGN.md + AGENTS.md rules
 ```
 
-**Preserve, do not redesign.** The most-used value wins by default; nothing is made "nicer". **Measure, do not guess.** Colours are judged from computed styles, not class names. **Ask about intent, decide about accident.** Consistent across screens is intent; varying without reason is accident, and the owner confirms. **The code is the catalog.** The page renders the real components; no Storybook, no copies. **Small verified steps.** Every change is re-measured and compared before the next.
+**Preserve, do not redesign.** The most-used value wins by default; nothing is made "nicer". The one exception is legibility: text that fails WCAG AA contrast on its background is its own decision, with the closest value that passes. **Measure, do not guess.** Colours are judged from computed styles, not class names. **Ask about intent, decide about accident.** Consistent across screens is intent; varying without reason is accident, and the owner confirms. **The code is the catalog.** The page renders the real components; no Storybook, no copies. **Small verified steps.** Every change is re-measured and compared before the next.
 
 Optimised for React + Tailwind (+ shadcn), the usual vibe-coding stack. Measurement works on any web app; token and component steps adapt to the styling system found ([references/tokens.md](references/tokens.md)).
 
@@ -46,7 +46,7 @@ Working files go in `.design-catalog/` at the app root (add it to `.gitignore`).
    python3 <skill>/scripts/analyze.py --snapshots .design-catalog/snapshots --allowed <css files declaring tokens> --print
    ```
 
-   It clusters perceptually identical colours, names them by role (`text-muted`, `border`, `primary`, `danger-soft`), reuses existing tokens where values match, finds off-scale type sizes, off-grid spacing, one-off radii and shadows, and groups buttons, inputs, cards and badges by their measured shape. It writes `summary.md` (grouped decisions `G1`…, with the per-value details below them), `proposals.json` (every decision, `approved: null`) and, with `--allowed`, `drift.md`. Add `--html` for `report.html`, a one-page visual with swatches and the rendered variants side by side; open it when a decision needs eyes.
+   It clusters perceptually identical colours, names them by role (`text-muted`, `border`, `primary`, `danger-soft`), reuses existing tokens where values match, finds off-scale type sizes, off-grid spacing, one-off radii and shadows, and groups buttons, inputs, cards and badges by their measured shape. It also checks every text element's contrast against the background actually behind it, after the proposed merges, and turns failures into one "hard to read" decision (`A1`…), noting when a merge is what breaks it. It writes `summary.md` (grouped decisions `G1`…, with the per-value details below them), `proposals.json` (every decision, `approved: null`) and, with `--allowed`, `drift.md`. Add `--html` for `report.html`, a one-page visual with swatches and the rendered variants side by side; open it when a decision needs eyes.
 
 4. **Read before relaying.** Rename clusters to the app's vocabulary in `proposals.json` if the suggested names are off, check that counts are not one list rendered forty times, and snapshot any screen you missed. [references/deciding.md](references/deciding.md) is the judgement guide: intent versus accident, reusing what exists, when two components are one.
 
@@ -101,6 +101,7 @@ Someone asks whether the app still follows its design system, or you suspect dri
 ## Rules of evidence
 
 - Computed styles are the truth for what a colour is; the source is the truth for where it is written. Report both.
+- Contrast is judged against the element's own and its ancestors' painted backgrounds. Text over images or gradients, and text placed over something that is not its ancestor, is not checked; the summary says how many. Disabled or faded text is exempt, as WCAG allows.
 - Snapshots see the resting state. Hover, focus, open menus and modals need to be triggered and captured with a filter, or checked by eye; say which you did.
 - Counts include every list row. Say "the project card, rendered six times", not "six cards".
 - When the scan and the snapshots disagree (a class in the source never appears on screen), the code path is dead or unreached; note it, do not count it.

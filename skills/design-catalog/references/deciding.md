@@ -12,7 +12,17 @@ A vibe-coded app drifts because every generation picked a plausible value with n
 - An indigo for buttons and a lighter indigo for links: could be a real two-step scale. Ask, and offer "one primary plus a hover shade" as the default.
 - One screen with a different page width or a different heading size: accident if it is the odd one out, intent if it is a different kind of screen (login, landing page). Say which it looks like.
 
-Prefer the value that is most used, then the one defined in an existing token or shared component, then the one on a standard scale. Never prefer a value because it is "nicer"; that is redesign.
+Prefer the value that is most used, then the one defined in an existing token or shared component, then the one on a standard scale. Never prefer a value because it is "nicer"; that is redesign. Legibility is not taste, though; see below.
+
+## Legibility
+
+"The one you meant" can still be unreadable: a light grey chosen by one generation becomes the official `text-subtle` and spreads to every screen, or merging four greys picks the most used one, which happens to be the lightest. So the analysis checks every text element against WCAG AA (4.5:1, or 3:1 for text 24px and up, or 18.66px and up when bold) on the colour actually behind it, after the proposed merges and folds, and puts the failures in one group, "Text that is hard to read".
+
+- The colour groups keep their preserve-first recommendation. Contrast is a separate decision, so the owner sees both: what was intended, and that it does not read. When a merge is what breaks it, the colour group says so and points to the contrast group.
+- Each fix is the closest value that passes: a colour already on the scale when it is about as close, otherwise the nearest Tailwind shade of the same family, otherwise the smallest lightness change. A bigger step that is already on the scale is offered as the alternative. When the text cannot move far enough (white on a pale button), the fix changes the background instead, and says that this changes every use of it.
+- Recommend yes. If the owner keeps a failing colour on purpose (decorative IDs, a brand colour they will not touch), record `approved: false` with their reason in `note`, and list it under "Open" in `DESIGN.md`.
+- Answers can name a different fix ("A1 use text-muted"): set the decision's `to` to that colour's value and `to_name` to its name.
+- What the check cannot see: text over images or gradients, text positioned over something that is not its ancestor, `::placeholder`, hover and focus states. Do not claim the app is accessible because this group is empty; say contrast of the measured resting state passes.
 
 ## Reusing what exists
 
@@ -25,7 +35,7 @@ Likewise for components: if `components/ui/button.tsx` exists with `cva` variant
 The user reviews decisions one at a time, in plain words, in the conversation. `summary.md` is written for that; `report.html` (with `--html`) adds swatches and rendered variants when words are not enough.
 
 - Lead with the grouped decisions (`G1`…), one line each, exactly as in the summary. Do not paste the details section; offer it ("say G1 details for the six individual merges").
-- Translate measurements into things a person sees: "four slightly different greys for secondary text", "buttons come in a small square one and a tall rounded one", not "ΔE 0.018" or selector paths.
+- Translate measurements into things a person sees: "four slightly different greys for secondary text", "buttons come in a small square one and a tall rounded one", not "ΔE 0.018" or selector paths. Contrast ratios are the exception: "2.5:1, needs 4.5:1" is the plain way to say it, with what the text is ("the task IDs on /tasks").
 - Give your recommendation on each, in one clause, and say when you are unsure ("the 16px radius on project cards might be deliberate; they are the only big cards").
 - When the user answers, record it: in `proposals.json` set `approved` to `true` or `false` on the group, and on individual decisions when they answer at that level. Fix the suggested `name` when they give you the app's own word ("call it `ink`, not `text`"). Put anything they said that constrains the apply in `note`.
 - An unanswered decision is not approved. Ask again or leave it for a later batch; never apply it silently.

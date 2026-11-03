@@ -11,7 +11,8 @@ snapshots it checks:
   - text: must be the same
   - style: every changed property must be an approved change: colour A -> colour B where an approved
     decision in the mapping has A among its members and B as the survivor (or an approved existing token);
-    spacing/radius/font-size/shadow from -> to likewise. Anything else is an unapproved change.
+    spacing/radius/font-size/shadow from -> to likewise; an approved contrast fix (area "contrast") moves its
+    colour, and everything merged into it, to the fixed value. Anything else is an unapproved change.
 Elements present on one side only are listed as added/removed.
 
 Exit code 0 when there are no layout regressions and no unapproved style changes, 1 otherwise.
@@ -85,12 +86,22 @@ class Mapping:
                 return False
             return all_approved
 
+        # an approved contrast fix replaces a cluster's final value, after any merge or fold into it
+        redirect = {d["cluster"]: (C.parse(d["to"]), d["id"]) for d in proposals.get("decisions", []) if d.get("area") == "contrast" and d.get("to") and approved(d)}
         for d in proposals.get("decisions", []):
             if not approved(d):
                 continue
             self.approved_ids.append(d["id"])
             area = d.get("area")
-            if area == "color":
+            if area == "contrast":
+                to = C.parse(d.get("to") or "")
+                if to:
+                    self.allowed_colors.append((to, d["id"]))
+                    for m in d.get("members", []):
+                        frm = C.parse(m["value"])
+                        if frm:
+                            self.colors.append((frm, to, d["id"]))
+            elif area == "color":
                 to = C.parse(d.get("survivor") or "")
                 if not to:
                     continue
@@ -101,6 +112,8 @@ class Mapping:
                     target = by_id[target["fold_into"]]
                     hops += 1
                 to = C.parse(target.get("survivor") or "") or to
+                if target["id"] in redirect and redirect[target["id"]][0]:
+                    to = redirect[target["id"]][0]
                 self.allowed_colors.append((to, d["id"]))
                 for m in d.get("members", []):
                     frm = C.parse(m["value"])

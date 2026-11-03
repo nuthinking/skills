@@ -13,7 +13,7 @@ Writes into --out (default: the parent of the snapshots folder):
     drift.md/json    only with --allowed: values on screen that match none of the tokens declared in those CSS files
 
 Decision IDs: C colours, T type sizes, H headings, F font families, S spacing, R radii, D shadows,
-B buttons, I inputs, K cards, P badges. Each is approved or rejected one by one; compare.py reads the
+B buttons, I inputs, K cards, P badges, A text that fails WCAG AA contrast. Each is approved or rejected one by one; compare.py reads the
 approved ones as the allowed before/after mapping.
 
 Standard library only.
@@ -119,6 +119,11 @@ class Screen:
         for e in self.elements:
             self.children[e.get("p", -1)].append(e["i"])
         self.png = next((p for p in (os.path.splitext(path)[0] + ".png",) if os.path.exists(p)), None)
+        # what is painted behind the collected root: the collector records it; older snapshots assume the
+        # default white canvas in light mode and leave dark mode unchecked
+        self.canvas = C.parse(data.get("backdrop") or "") or ((1.0, 1.0, 1.0, 1.0) if self.scheme == "light" else None)
+        if self.canvas and self.canvas[3] < 0.999:
+            self.canvas = C.over(self.canvas, (1.0, 1.0, 1.0, 1.0))
 
     def style(self, e: dict) -> dict:
         return self.styles[e["s"]] if 0 <= e.get("s", -1) < len(self.styles) else {}
@@ -136,6 +141,46 @@ class Screen:
             if d < depth:
                 queue.extend((j, d + 1) for j in self.children.get(i, []))
         return ""
+
+
+    def backdrop(self, e: dict) -> tuple[C.Color | None, str | None]:
+        """The opaque colour behind e's text, from its own and its ancestors' backgrounds.
+        Returns (colour, None), or (None, reason) when it cannot be told or the text is exempt."""
+        layers = []
+        i = e["i"]
+        while i is not None and 0 <= i < len(self.elements):
+            el = self.elements[i]
+            st = self.style(el)
+            if el.get("disabled"):
+                return None, "disabled"
+            if st.get("opacity") and (px(st["opacity"] + "px") or 0) < 1:
+                return None, "dimmed"  # faded with opacity: usually a disabled or decorative state
+            if st.get("background-image"):
+                return None, "image"
+            c = C.parse(st.get("background-color", ""))
+            if c and c[3] > 0.02:
+                layers.append(c)
+                if c[3] >= 0.999:
+                    break
+            i = el.get("p", -1)
+        else:
+            if self.canvas is None:
+                return None, "unknown"
+            layers.append(self.canvas)
+        bg = layers[-1]
+        for c in reversed(layers[:-1]):
+            bg = C.over(c, bg)
+        return bg, None
+
+
+def is_large_text(st: dict) -> bool:
+    """WCAG large text: 24px and up, or 18.66px (14pt) and up when bold."""
+    size = px(st.get("font-size")) or 16
+    try:
+        weight = int(float(st.get("font-weight", "400")))
+    except ValueError:
+        weight = 700 if st.get("font-weight") == "bold" else 400
+    return size >= 24 or (size >= 18.66 and weight >= 700)
 
 
 def load_screens(folder: str) -> list[Screen]:
@@ -285,7 +330,7 @@ def analyze_colors(screens: list[Screen], scan, tokens: dict, threshold: float, 
         if c is None or c[3] <= 0.02:
             return
         key = C.to_hex(c)
-        t = table.setdefault(key, {"value": value, "hex": key, "parsed": c, "count": 0, "roles": Counter(), "screens": set(), "samples": [], "button_bg": 0, "page_area": 0})
+        t = table.setdefault(key, {"value": value, "hex": key, "parsed": c, "count": 0, "roles": Counter(), "screens": set(), "samples": [], "button_bg": 0, "page_area": 0, "on": {}, "skipped": Counter()})
         t["count"] += 1
         t["roles"][role] += 1
         t["screens"].add(screen.name)
@@ -300,7 +345,17 @@ def analyze_colors(screens: list[Screen], scan, tokens: dict, threshold: float, 
             st = sc.style(e)
             w, h = (e.get("r") or [0, 0, 0, 0])[2:4]
             if e.get("txt") or (e.get("t") in ("input", "textarea", "select") and e.get("type") not in INPUT_TYPES_SKIP):
-                add(st.get("color"), "text", sc, e)
+                t = add(st.get("color"), "text", sc, e)
+                if t:
+                    bg, why = sc.backdrop(e)
+                    if why:
+                        t["skipped"][why] += 1
+                    else:
+                        o = t["on"].setdefault((C.to_hex(bg), is_large_text(st)), {"bg": bg, "count": 0, "screens": set(), "samples": []})
+                        o["count"] += 1
+                        o["screens"].add(sc.name)
+                        if len(o["samples"]) < 3:
+                            o["samples"].append(sample_of(sc, e))
             bg = st.get("background-color")
             if bg:
                 t = add(bg, "background", sc, e, w * h)
@@ -495,8 +550,151 @@ def analyze_colors(screens: list[Screen], scan, tokens: dict, threshold: float, 
             "members": [{k: v for k, v in m.items() if k != "parsed"} for m in members],
             "approved": None, "note": "",
         })
-    meta = {"neutral_count": len(neutrals), "chromatic_count": len(clusters) - len(neutrals), "hue_groups": [{"name": g["name"], "hue": round(g["H"]), "clusters": [c["id"] for c in g["members"]]} for g in groups]}
-    return decisions, meta
+    contrast_dec, contrast_meta = analyze_contrast(clusters, table, {d["id"]: d["name"] for d in decisions})
+    meta = {"neutral_count": len(neutrals), "chromatic_count": len(clusters) - len(neutrals), "hue_groups": [{"name": g["name"], "hue": round(g["H"]), "clusters": [c["id"] for c in g["members"]]} for g in groups], "contrast": contrast_meta}
+    return decisions + contrast_dec, meta
+
+
+def fmt_ratio(r: float) -> str:
+    return f"{math.floor(r * 10) / 10:g}:1"  # rounded down, so 4.49 never reads as a pass
+
+
+def analyze_contrast(clusters: list[dict], table: dict, names: dict[str, str]) -> tuple[list[dict], dict]:
+    """Text that fails WCAG AA on its background once the proposed merges and folds are applied.
+
+    Every text use was recorded with the opaque colour behind it (own and ancestor backgrounds). Here each
+    surviving colour is checked against every background its members sat on, with those backgrounds also
+    merged. A failing colour becomes one decision with the closest fix: another colour already on the scale
+    that passes, else the nearest Tailwind shade of its family that passes, else the smallest lightness
+    change; when the text cannot move far enough (white on a pale button), the background is changed instead.
+    """
+    final_of: dict[str, dict] = {}
+    for cl in clusters:
+        for m in cl["members"]:
+            final_of[m["hex"]] = cl["fold_into"] if cl["fold_into"] is not None else cl
+    finals = [cl for cl in clusters if cl["fold_into"] is None]
+    stats = {"checked": 0, "failing": 0, "skipped": Counter()}
+
+    def bg_after(hexv: str, bg: C.Color) -> tuple[C.Color, dict | None]:
+        f = final_of.get(hexv)
+        if f is not None and f["parsed"][3] >= 0.999:
+            return f["parsed"], f
+        return bg, None
+
+    def label(cl: dict | None, c: C.Color) -> str:
+        if cl is not None:
+            return f"`{names.get(cl['id'], cl['name'])}` {cl['hex']}"
+        return C.to_hex(c)
+
+    issues = []
+    for f in finals:
+        sources = [cl for cl in clusters if (cl["fold_into"] if cl["fold_into"] is not None else cl) is f]
+        uses = []
+        for cl in sources:
+            for m in cl["members"]:
+                t = table[m["hex"]]
+                stats["skipped"].update(t["skipped"])
+                for (bh, large), o in t["on"].items():
+                    bg1, bg_cl = bg_after(bh, o["bg"])
+                    uses.append({"fg0": t["parsed"], "bg0": o["bg"], "bg": bg1, "bg_cl": bg_cl, "req": 3.0 if large else 4.5, "o": o})
+        fails = []
+        for u in uses:
+            stats["checked"] += u["o"]["count"]
+            r = C.contrast(f["parsed"], u["bg"])
+            if r < u["req"]:
+                fails.append(dict(u, ratio=r, before=C.contrast(u["fg0"], u["bg0"])))
+        if fails:
+            stats["failing"] += sum(x["o"]["count"] for x in fails)
+            issues.append((f, sources, uses, fails))
+
+    decisions = []
+    taken = set()
+    for f, sources, uses, fails in sorted(issues, key=lambda i: -sum(x["o"]["count"] for x in i[3])):
+        needs: dict[str, tuple[C.Color, float]] = {}
+        for u in uses:
+            k = C.to_hex(u["bg"])
+            needs[k] = (u["bg"], max(u["req"], needs.get(k, (None, 0))[1]))
+        need_list = list(needs.values())
+
+        def passes(c):
+            return all(C.contrast(c, bg) >= req for bg, req in need_list)
+
+        side, target, to, to_name, alt = "text", f, None, None, None
+        cands = [o for o in finals if o is not f and o["roles"].get("text") and o["neutral"] == f["neutral"] and C.compatible(o["parsed"], f["parsed"]) and passes(o["parsed"])]
+        pick = min(cands, key=lambda o: C.delta(o["parsed"], f["parsed"]), default=None)
+        nudged = C.nudge_to_contrast(f["parsed"], need_list)
+        # a colour already on the scale wins when it is about as close as the smallest fix; otherwise it is the alternative
+        if pick is not None and (nudged is None or C.delta(pick["parsed"], f["parsed"]) <= C.delta(nudged, f["parsed"]) + 0.04):
+            to, to_name, how = pick["parsed"], f"`{names.get(pick['id'], pick['name'])}`", "existing"
+        else:
+            alt = pick
+            if nudged is not None:
+                to, how = nudged, "nudged"
+                shades = [(n, c) for n, c in C.palette_family(f["parsed"]) if passes(c) and C.delta(c, nudged) <= 0.06]
+                if shades:
+                    to_name, to = min(shades, key=lambda s: C.delta(s[1], nudged))
+                    how = "palette"
+            else:
+                bgs = {C.to_hex(x["bg"]): x for x in fails}
+                only = next(iter(bgs.values())) if len(bgs) == 1 else None
+                if only is not None and only["bg_cl"] is not None and f["parsed"][3] >= 0.999:
+                    bg_cl = only["bg_cl"]
+                    alts = [o for o in finals if o is not bg_cl and o["roles"].get("background") and o["neutral"] == bg_cl["neutral"] and C.compatible(o["parsed"], bg_cl["parsed"]) and o["parsed"][3] >= 0.999 and C.contrast(f["parsed"], o["parsed"]) >= only["req"]]
+                    nb = None if alts else C.nudge_to_contrast(only["bg"], [(f["parsed"], only["req"])])
+                    if alts:
+                        pick = min(alts, key=lambda o: C.delta(o["parsed"], bg_cl["parsed"]))
+                        side, target, to, to_name, how = "background", bg_cl, pick["parsed"], f"`{names.get(pick['id'], pick['name'])}`", "existing"
+                    elif nb is not None:
+                        side, target, to, how = "background", only["bg_cl"], nb, "nudged"
+                        shades = [(n, c) for n, c in C.palette_family(nb) if C.contrast(f["parsed"], c) >= only["req"] and C.delta(c, nb) <= 0.06]
+                        if shades:
+                            to_name, to = min(shades, key=lambda s: C.delta(s[1], nb))
+                            how = "palette"
+        if target["id"] in taken:
+            continue
+        taken.add(target["id"])
+        count = sum(x["o"]["count"] for x in fails)
+        by_merge = sum(x["o"]["count"] for x in fails if x["before"] >= x["req"])
+        screens = sorted({s for x in fails for s in x["o"]["screens"]})
+        worst = min(fails, key=lambda x: x["ratio"] / x["req"])
+        name = names.get(f["id"], f["name"])
+        fg_label = ("white text" if f["L"] > 0.99 else "black text") if C._is_anchor(f["parsed"]) else f"`{name}` {f['hex']}"
+        what = f"{fg_label} on {label(worst['bg_cl'], worst['bg'])} is {fmt_ratio(worst['ratio'])} (needs {worst['req']:g}:1)"
+        where = f"{count} text element{'s' if count != 1 else ''} on {len(screens)} screen{'s' if len(screens) != 1 else ''}" + (f", {by_merge} of them only after the merge" if by_merge else "")
+        if to is None:
+            fix = "No single colour fixes it (it sits on light and dark backgrounds, or the background is not a token); split it per background or leave it."
+            action = "flag"
+        else:
+            to_hex = C.to_hex(to)
+            ratio = min(C.contrast(to, bg) for bg, _ in need_list) if side == "text" else C.contrast(f["parsed"], to)
+            verb = "Darken" if C.luminance(to) < C.luminance(target["parsed"]) else "Lighten"
+            if side == "background" and how == "existing":
+                fix = f"The text cannot move far enough; use {to_name} {to_hex} for that background instead, already on the scale ({fmt_ratio(ratio)}). That changes every use of {label(target, target['parsed'])}."
+            elif side == "background":
+                fix = f"The text cannot move far enough; {verb.lower()} the background {label(target, target['parsed'])} to {to_hex}" + (f" ({to_name})" if to_name else "") + f", {fmt_ratio(ratio)}. That changes every use of that background."
+            elif how == "existing":
+                fix = f"Use {to_name} {to_hex} instead, already on the scale ({fmt_ratio(ratio)})."
+            elif how == "palette":
+                fix = f"{verb} it to {to_hex} ({to_name}, {fmt_ratio(ratio)})."
+            else:
+                fix = f"{verb} it to {to_hex}, the smallest change that passes ({fmt_ratio(ratio)})."
+            if alt is not None:
+                fix += f" Or use `{names.get(alt['id'], alt['name'])}` {alt['hex']}, already on the scale but a bigger step ({fmt_ratio(min(C.contrast(alt['parsed'], bg) for bg, _ in need_list))})."
+            action = "fix"
+        members = [m["value"] for cl in clusters if (cl["fold_into"] if cl["fold_into"] is not None else cl) is target for m in cl["members"]]
+        decisions.append({
+            "id": f"A{len(decisions) + 1}", "area": "contrast", "action": action, "side": side,
+            "title": f"{fg_label} is hard to read", "short": f"{what} in {count} place{'s' if count != 1 else ''}", "proposal": f"{what} in {where}. {fix}",
+            "cluster": target["id"], "clusters": sorted({cl["id"] for cl in sources} | {target["id"]}),
+            "name": names.get(target["id"], target["name"]), "from": target["hex"], "survivor": target["members"][0]["value"],
+            "to": C.to_hex(to) if to is not None else None, "to_name": (to_name or "").strip("`") or None, "count": count, "caused_by_merge": by_merge,
+            "worst_ratio": math.floor(worst["ratio"] * 100) / 100, "screens": screens,
+            "fails": [{"fg": f["hex"], "bg": C.to_hex(x["bg"]), "bg_name": names.get(x["bg_cl"]["id"]) if x["bg_cl"] is not None else None, "ratio": math.floor(x["ratio"] * 100) / 100, "required": x["req"], "before": math.floor(x["before"] * 100) / 100, "count": x["o"]["count"], "screens": sorted(x["o"]["screens"]), "samples": x["o"]["samples"]} for x in sorted(fails, key=lambda x: -x["o"]["count"])],
+            "members": [{"value": v, "hex": C.to_hex(C.parse(v))} for v in members],
+            "approved": None, "note": "",
+        })
+    stats["skipped"] = dict(stats["skipped"])
+    return decisions, stats
 
 
 # ------------------------------------------------------------------ typography
@@ -1119,6 +1317,18 @@ def build_groups(decisions: list[dict], meta: dict, tokens: dict) -> list[dict]:
     if status and not any(gr["key"].startswith("hue-") for gr in groups):
         add("status", "Status colours", f"{', '.join(g['name'] for g in status)} are used for badges and notes and are internally consistent. Nothing to decide.", [], "info")
 
+    # legibility: the one place where the measured value is not the default answer
+    a = by_area["contrast"]
+    if a:
+        items = "; ".join(d["short"] + (f", use {d['to']}" + (f" ({d['to_name']})" if d["to_name"] else "") if d["to"] and d["side"] == "text" else f", change the background {d['from']} to {d['to']}" + (f" ({d['to_name']})" if d["to_name"] else "") if d["to"] else ", no single fix") for d in a[:4])
+        more = f"; {len(a) - 4} more under details" if len(a) > 4 else ""
+        add("contrast", "Text that is hard to read", f"{len(a)} text colour{'s' if len(a) != 1 else ''} fail{'' if len(a) != 1 else 's'} WCAG AA contrast after the changes above: {items}{more}. The fixes are the closest values that pass.", a, "contrast")
+        gid = groups[-1]["id"]
+        for g in groups[:-1]:
+            hit = sum(d["caused_by_merge"] for d in a if set(d["clusters"]) & set(g["decisions"]))
+            if hit:
+                g["proposal"] += f" This merge makes {hit} text element{'s' if hit != 1 else ''} fail contrast; see {gid}."
+
     # type
     t = by_area["font_size"]
     h = by_area["heading"]
@@ -1171,6 +1381,11 @@ def build_summary(title: str, screens: list[Screen], result: dict) -> str:
     lines = [f"# Design catalog proposal: {title}", ""]
     lines.append(f"Measured {len(screens)} screens: {', '.join(s.name for s in screens)}.")
     asks = [g for g in groups if g["decisions"]]
+    cm = result["meta"]["colors"].get("contrast")
+    if cm and cm["checked"]:
+        sk = cm["skipped"]
+        unchecked = sk.get("image", 0) + sk.get("unknown", 0)
+        lines.append(f"Contrast checked for {cm['checked']} text elements against WCAG AA: {cm['failing'] or 'none'} fail" + (f"; {unchecked} on images, gradients or an unknown background not checked" if unchecked else "") + (f"; {sk.get('disabled', 0) + sk.get('dimmed', 0)} disabled or faded are exempt" if sk.get("disabled") or sk.get("dimmed") else "") + ".")
     lines.append(f"{len(asks)} decisions to take. Answer by ID (\"G1 yes\", \"G4 keep the pills\"). Details per decision below; visual page with --html.")
     lines.append("")
     lines.append("## Decisions")
@@ -1232,6 +1447,18 @@ def build_visual(title: str, result: dict) -> str:
                 sws = "".join(f"<span class=sw style='background:{esc(m['hex'])}' title='{esc(m['hex'])} {m['count']}×'></span>" for m in d["members"])
                 cards.append(f"<div class=cl><div class=sws>{sws}</div><b>{esc(d['name'])}</b><span class=mono>{esc(hexes(d))}</span><span>{d['count']}× · {esc(d['role'])}</span></div>")
             body = f"<div class=row>{''.join(cards)}</div>"
+        elif key == "contrast":
+            rows = []
+            for d in items:
+                x = d["fails"][0]
+                chip = "<span class=box style='align-self:flex-start;background:{};color:{};padding:6px 10px;border-radius:6px;border:1px solid rgba(0,0,0,.08)'>{}</span>"
+                text = esc((x["samples"][0].get("text") if x["samples"] else None) or "Sample text")
+                after = ""
+                if d["to"]:
+                    fg, bg = (d["to"], x["bg"]) if d["side"] == "text" else (x["fg"], d["to"])
+                    after = f"<div class=sample>{chip.format(esc(bg), esc(fg), text)}<span>after · {esc(fmt_ratio(C.contrast(C.parse(fg), C.parse(bg))))}</span></div>"
+                rows.append(f"<div class=samples style='margin-bottom:10px'><div class=sample>{chip.format(esc(x['bg']), esc(x['fg']), text)}<span><b>{esc(d['name'])}</b> now · {esc(fmt_ratio(x['ratio']))} (needs {x['required']:g}:1)</span></div>{after}</div>")
+            body = "".join(rows)
         elif key == "type":
             steps = "".join(f"<span class=step><span style='font-size:{min(x['px'], 34)}px;line-height:1;color:{'#1a1a1f' if x['on_scale'] else '#b4540a'}'>Aa</span>{fmt_px(x['px'])}{'' if x['on_scale'] else ' ✕'}</span>" for x in meta["typography"]["sizes"])
             heads = ""
@@ -1284,6 +1511,8 @@ def analyze(snapshots_dir: str, scan_path: str | None, out_dir: str, threshold: 
     sh_dec, sh_meta = analyze_shadow(screens)
     color_names = {}
     for d in color_dec:
+        if d["area"] != "color":
+            continue
         fam = d.get("hue_group") or ("surface" if d["L"] > 0.9 else "dark" if d["L"] < 0.4 else "neutral")
         for m in d["members"]:
             color_names[m["hex"]] = fam

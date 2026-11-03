@@ -20,6 +20,16 @@ Nothing technical reaches the editors. The developer sets it up once, and this s
 
 The pictures come from the package's Storybook, which wraps the widget in a fake site; on a real site the widget inherits the site's font and colours.
 
+## Install
+
+Any agent that reads `SKILL.md` (Claude Code, Codex, Cursor, and others). This installs only this skill; add `-g` to install it in your user directory instead of the project:
+
+```bash
+npx skills@latest add nuthinking/skills --skill site-edit
+```
+
+Claude Code as a plugin (this installs all the skills in this repo): `/plugin install nuthinking-skills --marketplace nuthinking/skills`.
+
 ## What the skill does
 
 ```text

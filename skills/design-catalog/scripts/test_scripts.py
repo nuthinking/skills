@@ -132,6 +132,50 @@ class ColorTests(unittest.TestCase):
         self.assertIn(["#e5e7eb"], groups)
 
 
+    def test_contrast(self):
+        white = C.parse("#ffffff")
+        self.assertAlmostEqual(C.contrast(C.parse("#000000"), white), 21.0, places=2)
+        self.assertAlmostEqual(C.contrast(C.parse("#6b7280"), white), 4.83, places=2)
+        self.assertLess(C.contrast(C.parse("#9ca3af"), white), 3.0)
+        self.assertAlmostEqual(C.contrast(C.parse("rgba(0, 0, 0, 0.5)"), white), C.contrast(C.parse("#808080"), white), places=1)
+        fixed = C.nudge_to_contrast(C.parse("#9ca3af"), [(white, 4.5)])
+        self.assertGreaterEqual(C.contrast(fixed, white), 4.5)
+        self.assertLess(C.contrast(fixed, white), 4.8)  # the smallest change, not black
+        self.assertIsNone(C.nudge_to_contrast(white, [(C.parse("#a5b4fc"), 4.5)]))  # white cannot get lighter
+        self.assertTrue(analyze.is_large_text({"font-size": "24px", "font-weight": "400"}))
+        self.assertTrue(analyze.is_large_text({"font-size": "19px", "font-weight": "700"}))
+        self.assertFalse(analyze.is_large_text({"font-size": "19px", "font-weight": "400"}))
+
+
+def contrast_snapshot(folder: str):
+    """One screen: a light grey merged with a darker one that passed (the merge breaks it), a dark grey on the
+    scale, text on a gradient (not checked) and a disabled button (exempt)."""
+    os.makedirs(folder, exist_ok=True)
+    styles = [
+        {"background-color": "rgb(255, 255, 255)", "color": "rgb(17, 24, 39)", "font-family": "Geist", "font-size": "16px", "font-weight": "400", "display": "block"},
+        dict(BASE_TEXT, color="#7a7a7a"),
+        dict(BASE_TEXT, color="#767676"),
+        dict(BASE_TEXT, color="rgb(17, 24, 39)"),
+        {"background-image": "linear-gradient(red, blue)", "color": "rgb(17, 24, 39)", "font-size": "16px", "font-weight": "400", "display": "block"},
+        dict(BASE_TEXT, color="rgb(156, 163, 175)"),
+        dict(BASE_TEXT, color="rgb(75, 85, 99)"),
+    ]
+    els = [
+        el(0, -1, "body", "body", [0, 0, 1280, 800], "", 0),
+        el(1, 0, "p", "body > p", [40, 40, 200, 20], "Due Friday", 1),
+        el(2, 0, "p", "body > p:nth-of-type(2)", [40, 70, 200, 20], "Due Monday", 1),
+        el(3, 0, "p", "body > p:nth-of-type(3)", [40, 100, 200, 20], "Due Sunday", 1),
+        el(4, 0, "p", "body > p:nth-of-type(4)", [40, 130, 200, 20], "Owner", 2),
+        el(5, 0, "h1", "body > h1", [40, 160, 200, 30], "Settings", 3),
+        el(6, 0, "div", "body > div", [40, 200, 300, 100], "", 4),
+        el(7, 6, "p", "body > div > p", [60, 220, 200, 20], "On a gradient", 5),
+        el(8, 0, "button", "body > button", [40, 320, 100, 36], "Save", 5, disabled=True),
+        el(9, 0, "p", "body > p:nth-of-type(5)", [40, 370, 200, 20], "Help", 6),
+    ]
+    with open(os.path.join(folder, "settings__1280.json"), "w") as fh:
+        json.dump(snapshot("settings__1280", "/settings", els, styles), fh)
+
+
 class ScanTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.mkdtemp()
@@ -285,6 +329,48 @@ class AnalyzeCompareTests(unittest.TestCase):
         self.assertEqual(rc, 0)
         rc = compare.main([self.snaps, after, "--mapping", os.path.join(out, "proposals.json"), "--out", os.path.join(out, "c.md")])
         self.assertEqual(rc, 1)
+
+    def test_contrast_decisions_and_compare(self):
+        snaps = os.path.join(self.tmp, "contrast", "snapshots")
+        contrast_snapshot(snaps)
+        out = os.path.join(self.tmp, "contrast")
+        result = analyze.analyze(snaps, None, out, 0.03, "Test", [], html=True)
+        cm = result["meta"]["colors"]["contrast"]
+        self.assertEqual(cm["skipped"], {"image": 1, "disabled": 1})
+        a = [d for d in result["decisions"] if d["area"] == "contrast"]
+        self.assertEqual(len(a), 1, a)
+        a = a[0]
+        self.assertEqual((a["from"], a["side"], a["count"], a["caused_by_merge"]), ("#7a7a7a", "text", 4, 1))
+        self.assertGreaterEqual(C.contrast(C.parse(a["to"]), C.parse("#ffffff")), 4.5)
+        self.assertLess(C.contrast(C.parse(a["to"]), C.parse("#ffffff")), 5.0)  # closest fix, not the far darker grey
+        self.assertIn("#4b5563", a["proposal"])  # the grey already on the scale is offered as the alternative
+        keys = [g["key"] for g in result["groups"]]
+        self.assertIn("contrast", keys)
+        contrast_group = next(g for g in result["groups"] if g["key"] == "contrast")
+        greys = next(g for g in result["groups"] if g["key"] == "greys")
+        self.assertIn(f"see {contrast_group['id']}", greys["proposal"])
+        with open(os.path.join(out, "summary.md"), encoding="utf-8") as fh:
+            self.assertIn("Contrast checked for 6 text elements", fh.read())
+        # approving the greys and the fix allows both the merged and the survivor grey to become the fixed value
+        for g in result["groups"]:
+            if g["key"] in ("greys", "contrast"):
+                g["approved"] = True
+        after = os.path.join(out, "after")
+        shutil.copytree(snaps, after)
+        with open(os.path.join(after, "settings__1280.json")) as fh:
+            d = json.load(fh)
+        d["styles"][1]["color"] = a["to"]
+        d["styles"][2]["color"] = a["to"]
+        with open(os.path.join(after, "settings__1280.json"), "w") as fh:
+            json.dump(d, fh)
+        mapping = compare.Mapping(json.loads(json.dumps(result, default=lambda o: sorted(o) if isinstance(o, set) else str(o))), False)
+        r = compare.compare_screen("settings", compare.load(snaps)["settings__1280.json"], compare.load(after)["settings__1280.json"], mapping, 1.0)
+        self.assertEqual((len(r["approved"]), len(r["unapproved"]), len(r["layout"])), (4, 0, 0), r)
+        # without the contrast answer the same change is unapproved
+        contrast_group["approved"] = None
+        mapping = compare.Mapping(json.loads(json.dumps(result, default=lambda o: sorted(o) if isinstance(o, set) else str(o))), False)
+        r = compare.compare_screen("settings", compare.load(snaps)["settings__1280.json"], compare.load(after)["settings__1280.json"], mapping, 1.0)
+        self.assertEqual(len(r["unapproved"]), 4, r)
 
     def test_scripts_run_from_anywhere(self):
         env = dict(os.environ)
