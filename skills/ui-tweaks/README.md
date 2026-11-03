@@ -6,7 +6,7 @@ The last 10% of a design is craft: the card that wants 20px of padding instead o
 
 It is for refining a design, not redesigning it: no accent colours or font swaps unless you ask for them by name. The app's code is not touched while you play; it changes once, when you paste the result back.
 
-![The Tweaks panel over a task manager's dashboard: stat card and row padding, space above a section, heading tracking, card corners and shadow, and border and secondary-text shades, with three changes ready to copy](https://raw.githubusercontent.com/nuthinking/skills/main/docs/screenshots/ui-tweaks/panel.png)
+![The Tweaks panel over a task manager's dashboard: stat card and row padding, space above a section, heading tracking, card corners and shadow, and border and secondary-text shades, with three changes ready to copy; the panel is dark because the page is light](https://raw.githubusercontent.com/nuthinking/skills/main/docs/screenshots/ui-tweaks/panel.png)
 
 ## How it works
 
@@ -27,7 +27,7 @@ It is for refining a design, not redesigning it: no accent colours or font swaps
 
 ## The panel
 
-Designed to feel like a macOS inspector: translucent material, the system font at inspector sizes, hairline separators, spring motion, light and dark following your system. One file, no dependencies, with its styles sealed in a shadow root and attached outside the page's body, so it cannot affect the app and the app cannot affect it.
+Designed to feel like a macOS inspector: translucent material, the system font at inspector sizes, hairline separators, spring motion. It takes the opposite of the page underneath, dark over a light app and light over a dark one, so it never blends into what you are tweaking, and it flips when the app's theme does. One file, no dependencies, with its styles sealed in a shadow root and attached outside the page's body, so it cannot affect the app and the app cannot affect it.
 
 - Drag it by the header; it remembers where you left it.
 - Collapse it to a pill; **⌥T** (Alt+T) hides it entirely.

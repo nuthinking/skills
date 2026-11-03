@@ -358,6 +358,21 @@
   const changedCount = () => controls.filter((c) => isChanged(c, values[c.id])).length;
 
   let probe = null;
+  // Any CSS colour → [r, g, b, alpha] through a 1px canvas; null when the browser can't parse it.
+  function rgbaOf(str) {
+    if (!str) return null;
+    try {
+      if (!probe) { const cv = document.createElement("canvas"); cv.width = cv.height = 1; probe = cv.getContext("2d", { willReadFrequently: true }); }
+      probe.fillStyle = "#010203";
+      probe.fillStyle = str;
+      if (probe.fillStyle === "#010203" && !/^#010203$/i.test(str)) return null;
+      probe.clearRect(0, 0, 1, 1);
+      probe.fillRect(0, 0, 1, 1);
+      const d = probe.getImageData(0, 0, 1, 1).data;
+      return [d[0], d[1], d[2], d[3] / 255];
+    } catch (e) { return null; }
+  }
+
   function toHex(str) {
     str = String(str || "").trim();
     const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(str);
@@ -370,16 +385,8 @@
       resolved = getComputedStyle(el).color;
       el.remove();
     }
-    try {
-      if (!probe) { const cv = document.createElement("canvas"); cv.width = cv.height = 1; probe = cv.getContext("2d", { willReadFrequently: true }); }
-      probe.fillStyle = "#010203";
-      probe.fillStyle = resolved;
-      if (probe.fillStyle === "#010203" && !/^#010203$/i.test(resolved)) return null;
-      probe.clearRect(0, 0, 1, 1);
-      probe.fillRect(0, 0, 1, 1);
-      const d = probe.getImageData(0, 0, 1, 1).data;
-      return "#" + [d[0], d[1], d[2]].map((n) => (n < 16 ? "0" : "") + n.toString(16)).join("");
-    } catch (e) { return null; }
+    const d = rgbaOf(resolved);
+    return d ? "#" + d.slice(0, 3).map((n) => (n < 16 ? "0" : "") + n.toString(16)).join("") : null;
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -855,6 +862,7 @@
       ui.y = n.top;
       saveUi();
       place();
+      pickTheme();
     };
     header.addEventListener("pointermove", move);
     header.addEventListener("pointerup", up);
@@ -879,6 +887,25 @@
   // overflow on the app's body can't trap it, and re-rendering the body can't remove it.
   const attach = () => { if (!host.isConnected) document.documentElement.appendChild(host); };
 
+  // Dark over light pages, light over dark ones: average the first solid background behind three points of the panel.
+  function pickTheme() {
+    const r = panel.getBoundingClientRect();
+    if (!r.width) return;
+    let sum = 0;
+    const points = [[r.left + r.width / 2, r.top + r.height / 2], [r.left + 12, r.top + 12], [r.right - 12, r.bottom - 12]];
+    points.forEach(([px, py]) => {
+      let c = null;
+      for (const el of document.elementsFromPoint(clamp(px, 0, innerWidth - 1), clamp(py, 0, innerHeight - 1))) {
+        if (el === host) continue;
+        const v = rgbaOf(getComputedStyle(el).backgroundColor);
+        if (v && v[3] > 0.5) { c = v; break; }
+      }
+      if (!c) c = /dark/.test(getComputedStyle(document.documentElement).colorScheme) ? [0, 0, 0] : [255, 255, 255];
+      sum += 0.2126 * toLin(c[0] / 255) + 0.7152 * toLin(c[1] / 255) + 0.0722 * toLin(c[2] / 255);
+    });
+    panel.classList.toggle("dark", sum / points.length > 0.3);
+  }
+
   async function poll() {
     attach();
     if (document.hidden) return;
@@ -891,14 +918,16 @@
       if (lastText === null) fail("The tweaks list didn't load", e.message);
     }
     if (!failed) checkPresence();
+    pickTheme();
   }
 
   function boot() {
     attach();
     if (ui.collapsed) setCollapsed(true);
     place();
+    pickTheme();
     new MutationObserver(attach).observe(document.documentElement, { childList: true });
-    addEventListener("resize", place);
+    addEventListener("resize", () => { place(); pickTheme(); });
     poll();
     setInterval(poll, 1500);
   }
@@ -922,7 +951,7 @@ button { -webkit-tap-highlight-color: transparent; }
   --spring: cubic-bezier(.32, .72, 0, 1);
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
   --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
-  --bg: rgba(246, 246, 248, .84);
+  --bg: rgba(246, 246, 248, .9);
   --bg-solid: #f5f5f7;
   --fg: rgba(0, 0, 0, .86);
   --fg2: rgba(60, 60, 67, .62);
@@ -962,29 +991,28 @@ button { -webkit-tap-highlight-color: transparent; }
   -webkit-user-select: none;
   transform-origin: var(--origin, top right);
   interpolate-size: allow-keywords;
-  transition: width .46s var(--spring), border-radius .46s var(--spring), box-shadow .25s ease;
+  transition: width .46s var(--spring), border-radius .46s var(--spring), box-shadow .25s ease, background-color .35s ease, color .35s ease;
 }
-@media (prefers-color-scheme: dark) {
-  .panel {
-    --bg: rgba(28, 28, 30, .86);
-    --bg-solid: #1c1c1e;
-    --fg: rgba(255, 255, 255, .92);
-    --fg2: rgba(235, 235, 245, .6);
-    --fg3: rgba(235, 235, 245, .3);
-    --sep: rgba(255, 255, 255, .09);
-    --fill: rgba(118, 118, 128, .24);
-    --fill2: rgba(118, 118, 128, .36);
-    --track: rgba(118, 118, 128, .36);
-    --raised: #636366;
-    --knob: #f2f2f7;
-    --accent: #0a84ff;
-    --ring: rgba(10, 132, 255, .45);
-    --warn: #ff9f0a;
-    --rim: rgba(255, 255, 255, .22);
-    --shadow: 0 0 0 .5px rgba(0, 0, 0, .7), 0 4px 12px rgba(0, 0, 0, .2), 0 20px 48px rgba(0, 0, 0, .45);
-    --shadow-lift: 0 0 0 .5px rgba(0, 0, 0, .7), 0 8px 20px rgba(0, 0, 0, .25), 0 32px 72px rgba(0, 0, 0, .55);
-    --edge: inset 0 0 0 .5px rgba(255, 255, 255, .1);
-  }
+/* Over a light page the panel goes dark, over a dark page light, so it never blends into the app. */
+.panel.dark {
+  --bg: rgba(28, 28, 30, .86);
+  --bg-solid: #1c1c1e;
+  --fg: rgba(255, 255, 255, .92);
+  --fg2: rgba(235, 235, 245, .6);
+  --fg3: rgba(235, 235, 245, .3);
+  --sep: rgba(255, 255, 255, .09);
+  --fill: rgba(118, 118, 128, .24);
+  --fill2: rgba(118, 118, 128, .36);
+  --track: rgba(118, 118, 128, .36);
+  --raised: #636366;
+  --knob: #f2f2f7;
+  --accent: #0a84ff;
+  --ring: rgba(10, 132, 255, .45);
+  --warn: #ff9f0a;
+  --rim: rgba(255, 255, 255, .22);
+  --shadow: 0 0 0 .5px rgba(0, 0, 0, .45), 0 4px 12px rgba(0, 0, 0, .1), 0 20px 48px rgba(0, 0, 0, .22);
+  --shadow-lift: 0 0 0 .5px rgba(0, 0, 0, .45), 0 8px 20px rgba(0, 0, 0, .14), 0 32px 72px rgba(0, 0, 0, .3);
+  --edge: inset 0 0 0 .5px rgba(255, 255, 255, .1);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .panel { background: var(--bg-solid); }
